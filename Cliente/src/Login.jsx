@@ -64,7 +64,7 @@ function Login() {
                   <a className="nav-link active" aria-current="page" href="#">INICIO</a>
                 </li>
                 <li className="nav-item">
-                  <a className="nav-link" href="#">TEXTO 1</a>
+                  <a className="nav-link" href="#">¿QUE ES TATTOOARTE?</a>
                 </li>
                 <li className="nav-item">
                   <a className="nav-link" href="#">TEXTO 2</a>
