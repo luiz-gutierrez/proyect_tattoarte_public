@@ -14,7 +14,6 @@ function InicioT_tat() {
     const [tatuaId, setTatuaId] = useState('');
 
     useEffect(() => {
-        // Recuperar datos del tatuador del localStorage
         const name = localStorage.getItem('tatuaName');
         const id = localStorage.getItem('tatuaId');
         console.log('Nombre:', name);
@@ -30,14 +29,16 @@ function InicioT_tat() {
     }, [navigate]);
 
     useEffect(() => {
-        axios.get('http://localhost:3001/api/especialidades')
-            .then(response => {
-                setEspecialidades(response.data);
-            })
-            .catch(error => {
-                console.error('Error fetching specialties:', error);
-            });
-    }, []);
+        if (tatuaId) {
+            axios.get(`http://localhost:3001/api/especialidades/${tatuaId}`)
+                .then(response => {
+                    setEspecialidades(response.data);
+                })
+                .catch(error => {
+                    console.error('Error fetching specialties:', error);
+                });
+        }
+    }, [tatuaId]);
 
     const redirectToUrl = (url) => {
         navigate(url);
@@ -73,7 +74,7 @@ function InicioT_tat() {
             const formData = new FormData();
             formData.append('image', image);
             formData.append('esp_id', selectedEspecialidad.esp_id);
-            formData.append('id_tat', tatuaId);  // Añade el ID del tatuador
+            formData.append('id_tat', tatuaId);
 
             axios.post('http://localhost:3001/api/upload', formData)
                 .then(response => {
@@ -139,6 +140,8 @@ function InicioT_tat() {
                                         role="switch"
                                         id={`flexSwitchCheckDefault_${index}`}
                                         onChange={() => handleCheckboxChange(especialidad)}
+                                        checked={especialidad.status === 1}
+                                        disabled={especialidad.status !== 1}
                                     />
                                     {especialidad.esp_nombre}
                                 </div>

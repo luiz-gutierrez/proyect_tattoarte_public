@@ -317,7 +317,6 @@ app.get('/api/imagenes_pru', (req, res) => {
 // Configuración de archivos estáticos
 app.use('/uploads', express.static('uploads')); // Permite servir archivos estáticos desde la carpeta 'uploads'
 
-
 app.post('/api/register', (req, res) => {
     const {
         nombre,
@@ -369,6 +368,7 @@ app.post('/api/register', (req, res) => {
 
             // Obtener el ID del tatuador insertado
             const tatuaId = result.insertId;
+            console.log('ID del tatuador insertado:', tatuaId);
 
             // Insertar en la tabla direcciones
             const insertDireccionQuery = `
@@ -396,49 +396,99 @@ app.post('/api/register', (req, res) => {
                         });
                     }
 
-                    // Crear registros con estatus 1 para especialidades seleccionadas
-                    const especialidadesSeleccionadasValues = especialidadesSeleccionadas.map(espId => [tatuaId, espId, 1]);
-
-                    // Crear registros con estatus 0 para especialidades no seleccionadas
-                    const especialidadesNoSeleccionadasValues = todasEspecialidades
-                        .filter(espId => !especialidadesSeleccionadas.includes(espId))
-                        .map(espId => [tatuaId, espId, 0]);
-
-                    // Combinar ambas listas
-                    const especialidadesValues = [...especialidadesSeleccionadasValues, ...especialidadesNoSeleccionadasValues];
-
-                    // Insertar en la tabla imagenes_pru
-                    const insertEspecialidadesQuery = `
-                        INSERT INTO imagenes_pru (id_tat, esp_id, status)
-                        VALUES ?
-                    `;
-                    db.query(insertEspecialidadesQuery, [especialidadesValues], (err) => {
+                    // Eliminar registros anteriores en imagenes_pru relacionados con id_tat
+                    const deleteEspecialidadesQuery = 'DELETE FROM imagenes_pru WHERE id_tat = ?';
+                    db.query(deleteEspecialidadesQuery, [tatuaId], (err) => {
                         if (err) {
-                            console.error('Error inserting especialidades:', err);
+                            console.error('Error deleting old especialidades:', err);
                             return db.rollback(() => {
-                                res.status(500).json({ error: 'Error al registrar especialidades' });
+                                res.status(500).json({ error: 'Error al eliminar especialidades anteriores' });
                             });
                         }
+                        console.log('Registros antiguos eliminados para id_tat:', tatuaId);
 
-                        // Confirmar la transacción
-                        db.commit((err) => {
-                            if (err) {
-                                console.error('Error committing transaction:', err);
-                                return db.rollback(() => {
-                                    res.status(500).json({ error: 'Error al confirmar la transacción' });
+                        // Crear registros con estatus 1 para especialidades seleccionadas
+                        const especialidadesSeleccionadasValues = especialidadesSeleccionadas.map(espId => [tatuaId, espId, 1]);
+                        console.log('Especialidades seleccionadas:', especialidadesSeleccionadasValues);
+
+                        // Crear registros con estatus 0 para especialidades no seleccionadas
+                        const especialidadesNoSeleccionadasValues = todasEspecialidades
+                            .filter(espId => !especialidadesSeleccionadas.includes(espId))
+                            .map(espId => [tatuaId, espId, 0]);
+                        console.log('Especialidades no seleccionadas:', especialidadesNoSeleccionadasValues);
+
+                        // Combinar ambas listas
+                        const especialidadesValues = [...especialidadesSeleccionadasValues, ...especialidadesNoSeleccionadasValues];
+                        console.log('Datos combinados para insertar en imagenes_pru:', especialidadesValues);
+
+                        // Insertar en la tabla imagenes_pru solo si hay especialidades
+                        if (especialidadesValues.length > 0) {
+                            const insertEspecialidadesQuery = `
+                                INSERT INTO imagenes_pru (id_tat, esp_id, status)
+                                VALUES ?
+                            `;
+                            db.query(insertEspecialidadesQuery, [especialidadesValues], (err) => {
+                                if (err) {
+                                    console.error('Error inserting especialidades:', err);
+                                    return db.rollback(() => {
+                                        res.status(500).json({ error: 'Error al registrar especialidades' });
+                                    });
+                                }
+
+                                console.log('Especialidades insertadas exitosamente');
+
+                                // Confirmar la transacción
+                                db.commit((err) => {
+                                    if (err) {
+                                        console.error('Error committing transaction:', err);
+                                        return db.rollback(() => {
+                                            res.status(500).json({ error: 'Error al confirmar la transacción' });
+                                        });
+                                    }
+
+                                    // Responder con éxito y enviar el ID del tatuador
+                                    res.status(200).json({ message: 'Tatuador registrado exitosamente', tatuaId });
                                 });
-                            }
+                            });
+                        } else {
+                            // Confirmar la transacción si no hay especialidades que insertar
+                            db.commit((err) => {
+                                if (err) {
+                                    console.error('Error committing transaction:', err);
+                                    return db.rollback(() => {
+                                        res.status(500).json({ error: 'Error al confirmar la transacción' });
+                                    });
+                                }
 
-                            // Responder con éxito y enviar el ID del tatuador
-                            res.status(200).json({ message: 'Tatuador registrado exitosamente', tatuaId });
-                        });
+                                // Responder con éxito y enviar el ID del tatuador
+                                res.status(200).json({ message: 'Tatuador registrado exitosamente', tatuaId });
+                            });
+                        }
                     });
                 });
             });
         });
     });
 });
+
   
+// -----------------------------------------------------------------------------------------------------------------------------------
+app.get('/api/especialidades/:id_tat', (req, res) => {
+    const idTat = req.params.id_tat;
+    const query = `
+        SELECT esp.*, img.status 
+        FROM especialidades esp 
+        LEFT JOIN imagenes_pru img 
+        ON esp.esp_id = img.esp_id AND img.id_tat = ?
+    `;
+    db.query(query, [idTat], (error, results) => {
+        if (error) {
+            res.status(500).send(error);
+        } else {
+            res.status(200).json(results);
+        }
+    });
+});
 
 // Iniciar el servidor
 app.listen(port, () => {

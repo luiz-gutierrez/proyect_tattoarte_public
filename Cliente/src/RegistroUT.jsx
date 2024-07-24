@@ -97,7 +97,7 @@ function RegistroUT() {
             },
             body: JSON.stringify({
                 ...formData,
-                especialidadesSeleccionadas: formData.especialidades.map(esp => esp.esp_id), // Obtener sólo los IDs
+                especialidadesSeleccionadas: formData.especialidades, // Obtener sólo los IDs
                 todasEspecialidades: especialidades.map(esp => esp.esp_id) // Obtener sólo los IDs
             })
         })
@@ -117,6 +117,7 @@ function RegistroUT() {
         });
     }
 };
+
 
   return (
     <div className="Fondo1">
