@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Table, Modal, Button, Form } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import jsPDF from 'jspdf';  
-import 'jspdf-autotable';   
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 function InicioA_Pla() {
   const [planes, setPlanes] = useState([]);
@@ -120,21 +120,21 @@ function InicioA_Pla() {
       }
     }
   };
- 
+
   const generatePDF = () => {
     const doc = new jsPDF();
     doc.setFontSize(12);
     doc.text('Planes', 10, 10);
-  
+
     const tableColumn = [['Nombre', 'Descripción']];
     const tableRows = planes.map(plan => [plan.pla_nombre, plan.pla_descripcion]);
-  
+
     doc.autoTable({
       head: tableColumn,
       body: tableRows,
       startY: 20,
     });
-  
+
     const pdfBlob = doc.output('blob');
     const pdfUrl = URL.createObjectURL(pdfBlob);
     setPdfData(pdfUrl);
@@ -148,6 +148,12 @@ function InicioA_Pla() {
     link.click();
     setShowPDFModal(false);
   };
+
+  const handleLogout = () => {
+    localStorage.removeItem('tatuaName');
+    navigate('/'); // Redirige al usuario a la página principal
+  };
+
 
   return (
     <div>
@@ -173,9 +179,8 @@ function InicioA_Pla() {
                   <a className="nav-link" onClick={() => redirectToUrl('/admin_planes')}>PLANES</a>
                 </li>
               </ul>
-                            <div class="ms-auto p-2">
-            <button type="button" class="btn btn-outline-danger" onClick={() => redirectToUrl('/')}>cerrar sesion</button>
-                    </div>
+              <div class="ms-auto p-2">
+                <button type="button" className="btn btn-outline-danger" onClick={handleLogout}>Cerrar sesión</button>                    </div>
             </div>
           </div>
         </nav>

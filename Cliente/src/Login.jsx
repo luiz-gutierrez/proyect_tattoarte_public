@@ -28,7 +28,7 @@ function Login() {
                 redirectToUrl('/inicio_admin');
             } else if (userType === 'tatuador') {
                 const tatuaName = response.data.tatuaName;
-                const tatuaId = response.data.idName;
+                const tatuaId = response.data.tatuaId;
                 localStorage.setItem('tatuaId', tatuaId);
                 localStorage.setItem('tatuaName', tatuaName);
                 redirectToUrl('/inicio_tatuador');

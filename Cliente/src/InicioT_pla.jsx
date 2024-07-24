@@ -7,6 +7,11 @@ function InicioT_pla() {
     const redirectToUrl = (url) => {
         navigate(url); // Redirige a la URL especificada
     };
+    const handleLogout = () => {
+        localStorage.removeItem('tatuaName');
+        navigate('/'); // Redirige al usuario a la página principal
+    };
+    
 
     return (
         <div>
@@ -33,8 +38,7 @@ function InicioT_pla() {
                                 </li>
                             </ul>
                             <div class="ms-auto p-2">
-                                <button type="button" class="btn btn-outline-danger" onClick={() => redirectToUrl('/')}>cerrar sesion</button>
-                            </div>
+                                <button type="button" className="btn btn-outline-danger" onClick={handleLogout}>Cerrar sesión</button>                            </div>
                         </div>
                     </div>
                 </nav>

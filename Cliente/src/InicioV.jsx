@@ -35,6 +35,10 @@ function InicioV() {
         navigate(url);
     };
 
+    const handleLogout = () => {
+        localStorage.removeItem('tatuaName');
+        navigate('/'); // Redirige al usuario a la página principal
+    };
     return (
         <div>
             <div className="FondoA">
@@ -46,7 +50,7 @@ function InicioV() {
                         </button>
                         <div className="collapse navbar-collapse" id="navbarNav">
                             <div className="ms-auto p-2">
-                                <button type="button" className="btn btn-outline-danger" onClick={() => redirectToUrl('/')}>Cerrar sesión</button>
+                                 <button type="button" className="btn btn-outline-danger" onClick={handleLogout}>Cerrar sesión</button>
                             </div>
                         </div>
                     </div>

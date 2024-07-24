@@ -14,6 +14,22 @@ function InicioT_tat() {
     const [tatuaId, setTatuaId] = useState('');
 
     useEffect(() => {
+        // Recuperar datos del tatuador del localStorage
+        const name = localStorage.getItem('tatuaName');
+        const id = localStorage.getItem('tatuaId');
+        console.log('Nombre:', name);
+        console.log('ID:', id);
+
+        if (name && id) {
+            setTatuaName(name);
+            setTatuaId(id);
+        } else {
+            console.error('No se encontró tatuaId en localStorage');
+            navigate('/'); // Redirige al inicio de sesión si no se encuentra tatuaId
+        }
+    }, [navigate]);
+
+    useEffect(() => {
         axios.get('http://localhost:3001/api/especialidades')
             .then(response => {
                 setEspecialidades(response.data);
@@ -21,17 +37,6 @@ function InicioT_tat() {
             .catch(error => {
                 console.error('Error fetching specialties:', error);
             });
-    }, []);
-    
-    useEffect(() => {
-        const name = localStorage.getItem('tatuaName');
-        const id = localStorage.getItem('tatuaId');
-        if (name) {
-            setTatuaName(name);
-        }
-        if (id) {
-            setTatuaId(id);
-        }
     }, []);
 
     const redirectToUrl = (url) => {
@@ -69,20 +74,25 @@ function InicioT_tat() {
             formData.append('image', image);
             formData.append('esp_id', selectedEspecialidad.esp_id);
             formData.append('id_tat', tatuaId);  // Añade el ID del tatuador
-    
+
             axios.post('http://localhost:3001/api/upload', formData)
                 .then(response => {
-                    console.log(response.data);
+                    console.log('Imagen subida con éxito:', response.data);
                     handleCloseModal();
                 })
                 .catch(error => {
-                    console.error('Error uploading image:', error);
+                    console.error('Error al subir la imagen:', error);
                 });
         } else {
-            console.error('No especialidad selected or no image chosen');
+            console.error('No se ha seleccionado especialidad o imagen');
         }
     };
-    
+
+    const handleLogout = () => {
+        localStorage.removeItem('tatuaName');
+        localStorage.removeItem('tatuaId');
+        navigate('/'); // Redirige al inicio de sesión
+    };
 
     return (
         <div>
@@ -109,7 +119,7 @@ function InicioT_tat() {
                                 </li>
                             </ul>
                             <div className="ms-auto p-2">
-                                <button type="button" className="btn btn-outline-danger" onClick={() => redirectToUrl('/')}>Cerrar Sesión</button>
+                                <button type="button" className="btn btn-outline-danger" onClick={handleLogout}>Cerrar Sesión</button>
                             </div>
                         </div>
                     </div>

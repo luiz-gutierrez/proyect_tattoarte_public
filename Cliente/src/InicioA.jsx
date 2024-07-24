@@ -15,6 +15,11 @@ function InicioA() {
     const redirectToUrl = (url) => {
         navigate(url);
     };
+    const handleLogout = () => {
+        localStorage.removeItem('tatuaName');
+        navigate('/'); // Redirige al usuario a la página principal
+    };
+
 
     return (
         <div>
@@ -40,10 +45,10 @@ function InicioA() {
                                     <a className="nav-link" onClick={() => redirectToUrl('/admin_planes')}>PLANES</a>
                                 </li>
                             </ul>
-                                        <div class="ms-auto p-2">
-                            <button type="button" class="btn btn-outline-danger" onClick={() => redirectToUrl('/')}>cerrar sesion
-                            </button>
-                        </div>
+                            <div class="ms-auto p-2">
+                                <button type="button" className="btn btn-outline-danger" onClick={handleLogout}>Cerrar sesión</button>
+
+                            </div>
                         </div>
                     </div>
                 </nav>

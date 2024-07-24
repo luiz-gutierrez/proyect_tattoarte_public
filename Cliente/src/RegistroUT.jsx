@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom'; // Importa useNavigate
 import './App.css';
 
 function RegistroUT() {
   const [inputs, setInputs] = useState([]);
+  const [especialidades, setEspecialidades] = useState([]);
   const [formData, setFormData] = useState({
     nombre: '',
     apellido: '',
@@ -20,8 +23,20 @@ function RegistroUT() {
     red_facebook: '',
     red_whatsapp: '',
     red_instagram: '',
-    especialidades: []
+    especialidades: [] // IDs de especialidades seleccionadas
   });
+  const [errors, setErrors] = useState({});
+  const navigate = useNavigate(); // Inicializa useNavigate
+
+  useEffect(() => {
+    axios.get('http://localhost:3001/api/especialidades')
+      .then(response => {
+        setEspecialidades(response.data);
+      })
+      .catch(error => {
+        console.error('Error fetching specialties:', error);
+      });
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -31,49 +46,77 @@ function RegistroUT() {
     });
   };
 
-  const handleToggleInput = (type) => {
-    const inputIndex = inputs.indexOf(type);
-    if (inputIndex !== -1) {
-      setInputs(inputs.filter(input => input !== type));
-    } else {
-      setInputs([...inputs, type]);
-    }
+  const handleCheckboxChange = (especialidad) => {
+    setFormData((prevFormData) => {
+      const { especialidades } = prevFormData;
+      if (especialidades.includes(especialidad)) {
+        return {
+          ...prevFormData,
+          especialidades: especialidades.filter(esp => esp !== especialidad)
+        };
+      } else {
+        return {
+          ...prevFormData,
+          especialidades: [...especialidades, especialidad]
+        };
+      }
+    });
   };
 
-  const handleEspecialidadesChange = (e) => {
-    const { value, checked } = e.target;
-    const { especialidades } = formData;
+  const validateForm = () => {
+    const newErrors = {};
+    const requiredFields = [
+      'nombre', 'apellido', 'telefono', 'email', 'password',
+      'dir_calle', 'dir_numero_ext', 'dir_colonia', 'dir_cp',
+      'dir_municipio', 'dir_estado', 'dir_localidad'
+    ];
 
-    if (checked) {
-      setFormData({
-        ...formData,
-        especialidades: [...especialidades, value]
-      });
-    } else {
-      setFormData({
-        ...formData,
-        especialidades: especialidades.filter(id => id !== value)
-      });
-    }
+    requiredFields.forEach(field => {
+      if (!formData[field]) {
+        newErrors[field] = 'Este campo es requerido';
+      }
+    });
+
+    inputs.forEach(input => {
+      if (!formData[`red_${input.toLowerCase()}`]) {
+        newErrors[`red_${input.toLowerCase()}`] = 'Este campo es requerido';
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    fetch('http://localhost:3001/api/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(formData)
-    })
-      .then(response => response.json())
-      .then(data => {
-        console.log('Success:', data);
-      })
-      .catch((error) => {
-        console.error('Error:', error);
-      });
-  };
+    if (validateForm()) {
+        fetch('http://localhost:3001/api/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                ...formData,
+                especialidadesSeleccionadas: formData.especialidades.map(esp => esp.esp_id), // Obtener sólo los IDs
+                todasEspecialidades: especialidades.map(esp => esp.esp_id) // Obtener sólo los IDs
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+            if (data.message === 'Tatuador registrado exitosamente') {
+                localStorage.setItem('tatuaName', formData.nombre);
+                localStorage.setItem('tatuaId', data.tatuaId); // Guarda el ID del tatuador
+                navigate('/inicio_tatuador'); // Redirige al usuario a /inicio_tatuador
+            } else {
+                console.error('Error en el registro:', data.message);
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+    }
+};
 
   return (
     <div className="Fondo1">
@@ -105,104 +148,90 @@ function RegistroUT() {
           <div className="row">
             <div className="col">
               <input type="text" className="form-control" placeholder="NOMBRE" aria-label="First name" name="nombre" onChange={handleInputChange} />
+              {errors.nombre && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.nombre}</div>}
               <br />
-              <input type="text" className="form-control" placeholder="APELLIDO" aria-label="NOMBRE" name="apellido" onChange={handleInputChange} />
+              <input type="text" className="form-control" placeholder="APELLIDO" aria-label="First name" name="apellido" onChange={handleInputChange} />
+              {errors.apellido && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.apellido}</div>}
               <br />
               <input type="text" className="form-control" placeholder="TELEFONO" aria-label="First name" name="telefono" onChange={handleInputChange} />
+              {errors.telefono && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.telefono}</div>}
               <br />
             </div>
             <div className="col">
-              <input type="text" className="form-control" placeholder="CORREO" aria-label="First name" name="email" onChange={handleInputChange} />
+              <input type="text" className="form-control" placeholder="CORREO" aria-label="Email" name="email" onChange={handleInputChange} />
+              {errors.email && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.email}</div>}
               <br />
-              <input type="password" className="form-control" placeholder="CONTRASEÑA" aria-label="First name" name="password" onChange={handleInputChange} />
+              <input type="password" className="form-control" placeholder="CONTRASEÑA" aria-label="Password" name="password" onChange={handleInputChange} />
+              {errors.password && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.password}</div>}
               <br />
             </div>
           </div>
           <div className="row">
             <h2>DIRECCION</h2>
             <div className="col">
-              <input type="text" className="form-control" placeholder="CALLE" aria-label="First name" name="dir_calle" onChange={handleInputChange} />
+              <input type="text" className="form-control" placeholder="CALLE" aria-label="Street" name="dir_calle" onChange={handleInputChange} />
+              {errors.dir_calle && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.dir_calle}</div>}
               <br />
-              <input type="text" className="form-control" placeholder="NUMERO EXTERIOR" aria-label="NOMBRE" name="dir_numero_ext" onChange={handleInputChange} />
+              <input type="text" className="form-control" placeholder="NUMERO EXTERIOR" aria-label="Exterior number" name="dir_numero_ext" onChange={handleInputChange} />
+              {errors.dir_numero_ext && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.dir_numero_ext}</div>}
               <br />
-              <input type="text" className="form-control" placeholder="COLONIA" aria-label="First name" name="dir_colonia" onChange={handleInputChange} />
+              <input type="text" className="form-control" placeholder="COLONIA" aria-label="Neighborhood" name="dir_colonia" onChange={handleInputChange} />
+              {errors.dir_colonia && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.dir_colonia}</div>}
               <br />
-              <input type="text" className="form-control" placeholder="CODIGO POSTAL" aria-label="First name" name="dir_cp" onChange={handleInputChange} />
+              <input type="text" className="form-control" placeholder="CODIGO POSTAL" aria-label="Postal code" name="dir_cp" onChange={handleInputChange} />
+              {errors.dir_cp && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.dir_cp}</div>}
               <br />
             </div>
             <div className="col">
-              <input type="text" className="form-control" placeholder="MUNICIPIO" aria-label="First name" name="dir_municipio" onChange={handleInputChange} />
+              <input type="text" className="form-control" placeholder="MUNICIPIO" aria-label="Municipality" name="dir_municipio" onChange={handleInputChange} />
+              {errors.dir_municipio && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.dir_municipio}</div>}
               <br />
-              <input type="text" className="form-control" placeholder="ESTADO" aria-label="First name" name="dir_estado" onChange={handleInputChange} />
+              <input type="text" className="form-control" placeholder="ESTADO" aria-label="State" name="dir_estado" onChange={handleInputChange} />
+              {errors.dir_estado && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.dir_estado}</div>}
               <br />
-              <input type="text" className="form-control" placeholder="LOCALIDAD" aria-label="First name" name="dir_localidad" onChange={handleInputChange} />
+              <input type="text" className="form-control" placeholder="LOCALIDAD" aria-label="Locality" name="dir_localidad" onChange={handleInputChange} />
+              {errors.dir_localidad && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.dir_localidad}</div>}
               <br />
             </div>
           </div>
           <div className="row">
-            <h2>ESPECIALIDAD Y REDES SOCIALES</h2>
+            <h2>REDES SOCIALES</h2>
             <div className="col">
-              <div className="form-check form-switch">
-                <input className="form-check-input" type="checkbox" role="switch" id="facebookSwitch" onClick={() => handleToggleInput('FACEBOOK')} />
-                <label className="form-check-label" htmlFor="facebookSwitch">FACEBOOK</label>
-              </div>
+              <input type="text" className="form-control" placeholder="TIKTOK" aria-label="Tiktok" name="red_tiktok" onChange={handleInputChange} />
+              {errors.red_tiktok && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.red_tiktok}</div>}
               <br />
-              <div className="form-check form-switch">
-                <input className="form-check-input" type="checkbox" role="switch" id="whatsappSwitch" onClick={() => handleToggleInput('WHATSAPP')} />
-                <label className="form-check-label" htmlFor="whatsappSwitch">WHATSAPP</label>
-              </div>
+              <input type="text" className="form-control" placeholder="FACEBOOK" aria-label="Facebook" name="red_facebook" onChange={handleInputChange} />
+              {errors.red_facebook && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.red_facebook}</div>}
               <br />
-              <div className="form-check form-switch">
-                <input className="form-check-input" type="checkbox" role="switch" id="instagramSwitch" onClick={() => handleToggleInput('INSTAGRAM')} />
-                <label className="form-check-label" htmlFor="instagramSwitch">INSTAGRAM</label>
-              </div>
+              <input type="text" className="form-control" placeholder="WHATSAPP" aria-label="Whatsapp" name="red_whatsapp" onChange={handleInputChange} />
+              {errors.red_whatsapp && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.red_whatsapp}</div>}
               <br />
-              <div className="form-check form-switch">
-                <input className="form-check-input" type="checkbox" role="switch" id="tiktokSwitch" onClick={() => handleToggleInput('TIKTOK')} />
-                <label className="form-check-label" htmlFor="tiktokSwitch">TIKTOK</label>
-              </div>
-            </div>
-            <div className="col">
-              {inputs.map((input, index) => (
-                <input key={index} type="text" className="form-control mt-2" placeholder={`Link de ${input}`} name={`red_${input.toLowerCase()}`} aria-label={input} onChange={handleInputChange} />
-              ))}
+              <input type="text" className="form-control" placeholder="INSTAGRAM" aria-label="Instagram" name="red_instagram" onChange={handleInputChange} />
+              {errors.red_instagram && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.red_instagram}</div>}
+              <br />
             </div>
           </div>
           <div className="row">
             <h2>ESPECIALIDADES</h2>
             <div className="col">
-              <input className="form-check-input" type="checkbox" value="1" id="realista" onChange={handleEspecialidadesChange} /> REALISTA
-              <br />
-              <input className="form-check-input" type="checkbox" value="2" id="neotradicional" onChange={handleEspecialidadesChange} /> NEOTRADICIONAL
-              <br />
-              <input className="form-check-input" type="checkbox" value="3" id="dotwork" onChange={handleEspecialidadesChange} /> DOTWORK
-              <br />
-              <input className="form-check-input" type="checkbox" value="4" id="acuarela" onChange={handleEspecialidadesChange} /> ACUARELA
-              <br />
-              <input className="form-check-input" type="checkbox" value="5" id="geometrico" onChange={handleEspecialidadesChange} /> GEOMETRICO
-              <br />
-              <input className="form-check-input" type="checkbox" value="6" id="oldschool" onChange={handleEspecialidadesChange} /> OLD SCHOOL O TRADICIONAL
-              <br />
-            </div>
-            <div className="col">
-              <input className="form-check-input" type="checkbox" value="7" id="BLACKWORK" onChange={handleEspecialidadesChange} /> BLACKWORK
-              <br />
-              <input className="form-check-input" type="checkbox" value="8" id="JAPONÉS" onChange={handleEspecialidadesChange} /> JAPONÉS
-              <br />
-              <input className="form-check-input" type="checkbox" value="9" id="TEJIDO" onChange={handleEspecialidadesChange} /> TEJIDO
-              <br />
-              <input className="form-check-input" type="checkbox" value="10" id="TRIBAL" onChange={handleEspecialidadesChange} /> TRIBAL
-              <br />
-              <input className="form-check-input" type="checkbox" value="11" id="ANIME/GEEK/KAWAII" onChange={handleEspecialidadesChange} /> ANIME/GEEK/KAWAII
-              <br />
-              <input className="form-check-input" type="checkbox" value="12" id="3D" onChange={handleEspecialidadesChange} /> 3D
-              <br />
+              {especialidades.map(esp => (
+                <div key={esp.esp_id}>
+                  <input
+                    type="checkbox"
+                    id={`especialidad-${esp.esp_id}`}
+                    checked={formData.especialidades.includes(esp.esp_id)}
+                    onChange={() => handleCheckboxChange(esp.esp_id)}
+                  />
+                  <label htmlFor={`especialidad-${esp.esp_id}`}>{esp.esp_nombre}</label>
+                  <br />
+                </div>
+              ))}
             </div>
           </div>
-          <button type="submit" className="btn btn-secondary">Crear Perfil</button>
+          <br />
+          <button type="submit" className="btn btn-primary">Registrar</button>
         </form>
       </div>
-      <br />
     </div>
   );
 }
