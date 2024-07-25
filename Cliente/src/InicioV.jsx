@@ -8,11 +8,11 @@ function InicioV() {
     const [viewerName, setViewerName] = useState('');
     const [viewerId, setViewerId] = useState('');
 
-
     useEffect(() => {
         // Realizar la solicitud para obtener las imágenes desde la API
         axios.get('http://localhost:3001/api/imagenes_pru')
             .then(response => {
+                console.log(response.data); // Verificar los datos recibidos
                 setImagenes(response.data); // Asignar los datos recibidos al estado
             })
             .catch(error => {
@@ -39,6 +39,7 @@ function InicioV() {
         localStorage.removeItem('tatuaName');
         navigate('/'); // Redirige al usuario a la página principal
     };
+
     return (
         <div>
             <div className="FondoA">
@@ -57,15 +58,15 @@ function InicioV() {
                 </nav>
                 <div className="cuadro">
                     <div className="text-center mt-5">
-                    <h2>BIENVENIDO {viewerName} </h2>
-                    <h2>BIENVENIDO {viewerId} </h2>
-                    <br />
+                        <h2>BIENVENIDO {viewerName} </h2>
+                        <h2>BIENVENIDO {viewerId} </h2>
+                        <br />
                     </div>
                     <div className="row row-cols-2 row-cols-md-4 g-4" >
                         {imagenes.map((imagen, index) => (
                             <div className="col" key={index}>
                                 <div className="card border-dark">
-                                    <img src={`http://localhost:3001/uploads/${imagen.ima_url}`} className="card-img-top" alt={`Imagen ${index}`} />
+                                    <img src={`http://localhost:3001${imagen.ima_url}`} className="card-img-top" alt={`Imagen ${index}`} />
                                     <div className="card-body">
                                         <h5 className="card-title">{imagen.esp_id}</h5>
                                         <p className="card-text">{imagen.ima_url}</p>

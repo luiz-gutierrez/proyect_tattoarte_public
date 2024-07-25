@@ -16,10 +16,11 @@ app.use(bodyParser.urlencoded({ extended: true })); // Permite manejar datos de 
 // Configuración de multer para guardar archivos en la carpeta 'uploads'
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'uploads/'); // Define la carpeta de destino para los archivos subidos
+        cb(null, 'uploads/');
     },
     filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname)); // Define el nombre del archivo subido
+        const ext = path.extname(file.originalname);
+        cb(null, `${Date.now()}${ext}`);
     }
 });
 
@@ -118,22 +119,22 @@ app.post('/api/login', (req, res) => {
 });
 
 // Ruta para manejar la carga de imágenes
-app.post('/api/upload', upload.single('image'), (req, res) => {
-    const { id_tat, esp_id } = req.body;
-    const ima_url = req.file.filename; // Nombre generado por multer para la imagen subida
+// app.post('/api/upload', upload.single('image'), (req, res) => {
+//     const { id_tat, esp_id } = req.body;
+//     const ima_url = req.file.filename; // Nombre generado por multer para la imagen subida
 
-    // Inserta la imagen en la tabla imagenes_pru
-    const sql = 'INSERT INTO imagenes_pru (id_tat, esp_id, ima_url) VALUES (?, ?, ?)';
-    db.query(sql, [id_tat, esp_id, ima_url], (err, result) => {
-      if (err) {
-        console.error('Error saving image:', err); // Muestra error al guardar imagen
-        res.status(500).json({ error: 'Error saving image' });
-      } else {
-        console.log('Image saved successfully'); // Mensaje de éxito al guardar imagen
-        res.status(200).json({ message: 'Image saved successfully' });
-      }
-    });
-});
+//     // Inserta la imagen en la tabla imagenes_pru
+//     const sql = 'INSERT INTO imagenes_pru (id_tat, esp_id, ima_url) VALUES (?, ?, ?)';
+//     db.query(sql, [id_tat, esp_id, ima_url], (err, result) => {
+//       if (err) {
+//         console.error('Error saving image:', err); // Muestra error al guardar imagen
+//         res.status(500).json({ error: 'Error saving image' });
+//       } else {
+//         console.log('Image saved successfully'); // Mensaje de éxito al guardar imagen
+//         res.status(200).json({ message: 'Image saved successfully' });
+//       }
+//     });
+// });
 
 // Rutas relacionadas con viewers
 // Ruta para obtener datos de la tabla viewers
@@ -315,166 +316,53 @@ app.get('/api/imagenes_pru', (req, res) => {
 });
 
 // Configuración de archivos estáticos
-app.use('/uploads', express.static('uploads')); // Permite servir archivos estáticos desde la carpeta 'uploads'
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Permite servir archivos estáticos desde la carpeta 'uploads'
 
 app.post('/api/register', (req, res) => {
-    const {
-        nombre,
-        apellido,
-        telefono,
-        email,
-        password,
-        dir_calle,
-        dir_numero_ext,
-        dir_colonia,
-        dir_cp,
-        dir_municipio,
-        dir_estado,
-        dir_localidad,
-        red_tiktok,
-        red_facebook,
-        red_whatsapp,
-        red_instagram,
-        especialidadesSeleccionadas, // IDs de especialidades seleccionadas
-        todasEspecialidades // Todos los IDs de especialidades disponibles
-    } = req.body;
-
-    // Validar campos requeridos
-    if (!nombre || !apellido || !telefono || !email || !password ||
-        !dir_calle || !dir_numero_ext || !dir_colonia || !dir_cp ||
-        !dir_municipio || !dir_estado || !dir_localidad) {
-        return res.status(400).json({ error: 'Todos los campos son requeridos' });
-    }
-
-    // Iniciar transacción
-    db.beginTransaction((err) => {
+    const tatuador = req.body;
+    const especialidades = tatuador.especialidades; // Este es el array de especialidades
+  
+    // Insertar tatuador en la tabla `tatuadores`
+    const insertTatuadorQuery = 'INSERT INTO tatuadores (nombre, apellido, telefono, email, password) VALUES (?, ?, ?, ?, ?)';
+    const tatuadorValues = [tatuador.nombre, tatuador.apellido, tatuador.telefono, tatuador.email, tatuador.password];
+  
+    db.query(insertTatuadorQuery, tatuadorValues, (err, result) => {
+      if (err) {
+        return res.status(500).json({ message: 'Error al registrar el tatuador', error: err });
+      }
+  
+      const tatuadorId = result.insertId;
+  
+      // Insertar dirección en la tabla `direcciones`
+      const insertDireccionQuery = 'INSERT INTO direcciones (dir_calle, dir_numero_ext, dir_colonia, dir_cp, dir_municipio, dir_estado, dir_localidad) VALUES (?, ?, ?, ?, ?, ?, ?)';
+      const direccionValues = [tatuador.dir_calle, tatuador.dir_numero_ext, tatuador.dir_colonia, tatuador.dir_cp, tatuador.dir_municipio, tatuador.dir_estado, tatuador.dir_localidad];
+  
+      db.query(insertDireccionQuery, direccionValues, (err) => {
         if (err) {
-            console.error('Error al iniciar la transacción:', err);
-            return res.status(500).json({ error: 'Error al iniciar la transacción' });
+          return res.status(500).json({ message: 'Error al registrar la dirección', error: err });
         }
+  
+        // Insertar redes sociales en la tabla `redes_sociales`
+        const insertRedesQuery = 'INSERT INTO redes_sociales (red_tiktok, red_facebook, red_whatsapp, red_instagram) VALUES (?, ?, ?, ?)';
+        const redesValues = [tatuador.red_tiktok, tatuador.red_facebook, tatuador.red_whatsapp, tatuador.red_instagram];
+  
+        db.query(insertRedesQuery, redesValues, (err) => {
+          if (err) {
+            return res.status(500).json({ message: 'Error al registrar las redes sociales', error: err });
+          }
+    
+            res.status(201).json({ message: 'Tatuador registrado exitosamente', tatuaId: tatuadorId });
+          });
 
-        // Insertar en la tabla tatuadores
-        const insertTatuadorQuery = `
-            INSERT INTO tatuadores (nombre, apellido, telefono, email, password)
-            VALUES (?, ?, ?, ?, ?)
-        `;
-        db.query(insertTatuadorQuery, [nombre, apellido, telefono, email, password], (err, result) => {
-            if (err) {
-                console.error('Error inserting tatuador:', err);
-                return db.rollback(() => {
-                    res.status(500).json({ error: 'Error al registrar tatuador' });
-                });
-            }
-
-            // Obtener el ID del tatuador insertado
-            const tatuaId = result.insertId;
-            console.log('ID del tatuador insertado:', tatuaId);
-
-            // Insertar en la tabla direcciones
-            const insertDireccionQuery = `
-                INSERT INTO direcciones (dir_calle, dir_numero_ext, dir_colonia, dir_cp, dir_municipio, dir_estado, dir_localidad)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            `;
-            db.query(insertDireccionQuery, [dir_calle, dir_numero_ext, dir_colonia, dir_cp, dir_municipio, dir_estado, dir_localidad], (err) => {
-                if (err) {
-                    console.error('Error inserting direccion:', err);
-                    return db.rollback(() => {
-                        res.status(500).json({ error: 'Error al registrar dirección' });
-                    });
-                }
-
-                // Insertar en la tabla redes_sociales
-                const insertRedesQuery = `
-                    INSERT INTO redes_sociales (red_tiktok, red_facebook, red_whatsapp, red_instagram)
-                    VALUES (?, ?, ?, ?)
-                `;
-                db.query(insertRedesQuery, [red_tiktok, red_facebook, red_whatsapp, red_instagram], (err) => {
-                    if (err) {
-                        console.error('Error inserting redes sociales:', err);
-                        return db.rollback(() => {
-                            res.status(500).json({ error: 'Error al registrar redes sociales' });
-                        });
-                    }
-
-                    // Eliminar registros anteriores en imagenes_pru relacionados con id_tat
-                    const deleteEspecialidadesQuery = 'DELETE FROM imagenes_pru WHERE id_tat = ?';
-                    db.query(deleteEspecialidadesQuery, [tatuaId], (err) => {
-                        if (err) {
-                            console.error('Error deleting old especialidades:', err);
-                            return db.rollback(() => {
-                                res.status(500).json({ error: 'Error al eliminar especialidades anteriores' });
-                            });
-                        }
-                        console.log('Registros antiguos eliminados para id_tat:', tatuaId);
-
-                        // Crear registros con estatus 1 para especialidades seleccionadas
-                        const especialidadesSeleccionadasValues = especialidadesSeleccionadas.map(espId => [tatuaId, espId, 1]);
-                        console.log('Especialidades seleccionadas:', especialidadesSeleccionadasValues);
-
-                        // Crear registros con estatus 0 para especialidades no seleccionadas
-                        const especialidadesNoSeleccionadasValues = todasEspecialidades
-                            .filter(espId => !especialidadesSeleccionadas.includes(espId))
-                            .map(espId => [tatuaId, espId, 0]);
-                        console.log('Especialidades no seleccionadas:', especialidadesNoSeleccionadasValues);
-
-                        // Combinar ambas listas
-                        const especialidadesValues = [...especialidadesSeleccionadasValues, ...especialidadesNoSeleccionadasValues];
-                        console.log('Datos combinados para insertar en imagenes_pru:', especialidadesValues);
-
-                        // Insertar en la tabla imagenes_pru solo si hay especialidades
-                        if (especialidadesValues.length > 0) {
-                            const insertEspecialidadesQuery = `
-                                INSERT INTO imagenes_pru (id_tat, esp_id, status)
-                                VALUES ?
-                            `;
-                            db.query(insertEspecialidadesQuery, [especialidadesValues], (err) => {
-                                if (err) {
-                                    console.error('Error inserting especialidades:', err);
-                                    return db.rollback(() => {
-                                        res.status(500).json({ error: 'Error al registrar especialidades' });
-                                    });
-                                }
-
-                                console.log('Especialidades insertadas exitosamente');
-
-                                // Confirmar la transacción
-                                db.commit((err) => {
-                                    if (err) {
-                                        console.error('Error committing transaction:', err);
-                                        return db.rollback(() => {
-                                            res.status(500).json({ error: 'Error al confirmar la transacción' });
-                                        });
-                                    }
-
-                                    // Responder con éxito y enviar el ID del tatuador
-                                    res.status(200).json({ message: 'Tatuador registrado exitosamente', tatuaId });
-                                });
-                            });
-                        } else {
-                            // Confirmar la transacción si no hay especialidades que insertar
-                            db.commit((err) => {
-                                if (err) {
-                                    console.error('Error committing transaction:', err);
-                                    return db.rollback(() => {
-                                        res.status(500).json({ error: 'Error al confirmar la transacción' });
-                                    });
-                                }
-
-                                // Responder con éxito y enviar el ID del tatuador
-                                res.status(200).json({ message: 'Tatuador registrado exitosamente', tatuaId });
-                            });
-                        }
-                    });
-                });
-            });
-        });
+      });
     });
-});
-
+  });
+  
+  
   
 // -----------------------------------------------------------------------------------------------------------------------------------
-app.get('/api/especialidades/:id_tat', (req, res) => {
-    const idTat = req.params.id_tat;
+// Ruta para obtener especialidades y el estado de la imagen
+app.get('/api/especialidades/:id_tat', (req, res) => {    const idTat = req.params.id_tat;
     const query = `
         SELECT esp.*, img.status 
         FROM especialidades esp 
@@ -490,7 +378,58 @@ app.get('/api/especialidades/:id_tat', (req, res) => {
     });
 });
 
+// Ruta para manejar la carga de imágenes
+app.post('/api/upload', upload.single('image'), (req, res) => {
+    const { esp_id, id_tat } = req.body;
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null; // Ruta del archivo cargado
+
+    if (imageUrl) {
+        // Verificar si ya existe una imagen para la especialidad y tatuador
+        const checkImageQuery = 'SELECT * FROM imagenes_pru WHERE esp_id = ? AND id_tat = ?';
+        db.query(checkImageQuery, [esp_id, id_tat], (err, results) => {
+            if (err) {
+                return res.status(500).json({ message: 'Error checking existing image', error: err });
+            }
+
+            if (results.length > 0) {
+                // Ya existe una imagen, actualizar la URL y el estado
+                const updateImageQuery = 'UPDATE imagenes_pru SET ima_url = ?, status = 1 WHERE esp_id = ? AND id_tat = ?';
+                db.query(updateImageQuery, [imageUrl, esp_id, id_tat], (err) => {
+                    if (err) {
+                        return res.status(500).json({ message: 'Error updating image URL', error: err });
+                    }
+                    res.status(200).json({ message: 'Image updated successfully', ima_url: imageUrl });
+                });
+            } else {
+                // No existe una imagen, insertar una nueva
+                const insertImageQuery = 'INSERT INTO imagenes_pru (esp_id, ima_url, id_tat, status) VALUES (?, ?, ?, 1)';
+                db.query(insertImageQuery, [esp_id, imageUrl, id_tat], (err) => {
+                    if (err) {
+                        return res.status(500).json({ message: 'Error inserting image', error: err });
+                    }
+                    res.status(200).json({ message: 'Image uploaded successfully', ima_url: imageUrl });
+                });
+            }
+        });
+    } else {
+        res.status(400).json({ message: 'Image upload failed' });
+    }
+});
+
+// Ruta para eliminar la imagen
+app.delete('/api/delete-image', (req, res) => {
+    const { esp_id, id_tat } = req.body;
+
+    const deleteImageQuery = 'UPDATE imagenes_pru SET ima_url = NULL, status = 0 WHERE esp_id = ? AND id_tat = ?';
+    db.query(deleteImageQuery, [esp_id, id_tat], (err) => {
+        if (err) {
+            return res.status(500).json({ message: 'Error deleting image', error: err });
+        }
+        res.status(200).json({ message: 'Image deleted successfully' });
+    });
+});
+
 // Iniciar el servidor
 app.listen(port, () => {
-    console.log(`Servidor corriendo en http://localhost:${port}`); // Mensaje al iniciar el servidor
+    console.log(`Servidor corriendo en http://localhost:${port}`);
 });

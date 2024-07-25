@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom'; // Importa useNavigate
+import { useNavigate } from 'react-router-dom';
 import './App.css';
 
 function RegistroUT() {
-  const [inputs, setInputs] = useState([]);
   const [especialidades, setEspecialidades] = useState([]);
   const [formData, setFormData] = useState({
     nombre: '',
@@ -22,11 +21,10 @@ function RegistroUT() {
     red_tiktok: '',
     red_facebook: '',
     red_whatsapp: '',
-    red_instagram: '',
-    especialidades: [] // IDs de especialidades seleccionadas
+    red_instagram: ''
   });
   const [errors, setErrors] = useState({});
-  const navigate = useNavigate(); // Inicializa useNavigate
+  const navigate = useNavigate();
 
   useEffect(() => {
     axios.get('http://localhost:3001/api/especialidades')
@@ -46,23 +44,6 @@ function RegistroUT() {
     });
   };
 
-  const handleCheckboxChange = (especialidad) => {
-    setFormData((prevFormData) => {
-      const { especialidades } = prevFormData;
-      if (especialidades.includes(especialidad)) {
-        return {
-          ...prevFormData,
-          especialidades: especialidades.filter(esp => esp !== especialidad)
-        };
-      } else {
-        return {
-          ...prevFormData,
-          especialidades: [...especialidades, especialidad]
-        };
-      }
-    });
-  };
-
   const validateForm = () => {
     const newErrors = {};
     const requiredFields = [
@@ -74,12 +55,6 @@ function RegistroUT() {
     requiredFields.forEach(field => {
       if (!formData[field]) {
         newErrors[field] = 'Este campo es requerido';
-      }
-    });
-
-    inputs.forEach(input => {
-      if (!formData[`red_${input.toLowerCase()}`]) {
-        newErrors[`red_${input.toLowerCase()}`] = 'Este campo es requerido';
       }
     });
 
@@ -97,8 +72,7 @@ function RegistroUT() {
             },
             body: JSON.stringify({
                 ...formData,
-                especialidadesSeleccionadas: formData.especialidades, // Obtener sólo los IDs
-                todasEspecialidades: especialidades.map(esp => esp.esp_id) // Obtener sólo los IDs
+                especialidades: especialidades.map(esp => ({ esp_id: esp.esp_id, status: 0 })) // Guardar todas las especialidades con estado 0
             })
         })
         .then(response => response.json())
@@ -106,8 +80,8 @@ function RegistroUT() {
             console.log('Success:', data);
             if (data.message === 'Tatuador registrado exitosamente') {
                 localStorage.setItem('tatuaName', formData.nombre);
-                localStorage.setItem('tatuaId', data.tatuaId); // Guarda el ID del tatuador
-                navigate('/inicio_tatuador'); // Redirige al usuario a /inicio_tatuador
+                localStorage.setItem('tatuaId', data.tatuaId);
+                navigate('/inicio_tatuador');
             } else {
                 console.error('Error en el registro:', data.message);
             }
@@ -116,8 +90,7 @@ function RegistroUT() {
             console.error('Error:', error);
         });
     }
-};
-
+  };
 
   return (
     <div className="Fondo1">
@@ -199,38 +172,18 @@ function RegistroUT() {
             <h2>REDES SOCIALES</h2>
             <div className="col">
               <input type="text" className="form-control" placeholder="TIKTOK" aria-label="Tiktok" name="red_tiktok" onChange={handleInputChange} />
-              {errors.red_tiktok && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.red_tiktok}</div>}
               <br />
               <input type="text" className="form-control" placeholder="FACEBOOK" aria-label="Facebook" name="red_facebook" onChange={handleInputChange} />
-              {errors.red_facebook && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.red_facebook}</div>}
               <br />
+            </div>
+            <div className="col">
               <input type="text" className="form-control" placeholder="WHATSAPP" aria-label="Whatsapp" name="red_whatsapp" onChange={handleInputChange} />
-              {errors.red_whatsapp && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.red_whatsapp}</div>}
               <br />
               <input type="text" className="form-control" placeholder="INSTAGRAM" aria-label="Instagram" name="red_instagram" onChange={handleInputChange} />
-              {errors.red_instagram && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.red_instagram}</div>}
               <br />
             </div>
           </div>
-          <div className="row">
-            <h2>ESPECIALIDADES</h2>
-            <div className="col">
-              {especialidades.map(esp => (
-                <div key={esp.esp_id}>
-                  <input
-                    type="checkbox"
-                    id={`especialidad-${esp.esp_id}`}
-                    checked={formData.especialidades.includes(esp.esp_id)}
-                    onChange={() => handleCheckboxChange(esp.esp_id)}
-                  />
-                  <label htmlFor={`especialidad-${esp.esp_id}`}>{esp.esp_nombre}</label>
-                  <br />
-                </div>
-              ))}
-            </div>
-          </div>
-          <br />
-          <button type="submit" className="btn btn-primary">Registrar</button>
+          <button type="submit" className="btn btn-primary">REGISTRAR</button>
         </form>
       </div>
     </div>
