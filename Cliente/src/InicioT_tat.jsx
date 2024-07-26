@@ -26,10 +26,11 @@ function InicioT_tat() {
 
     useEffect(() => {
         if (tatuaId) {
+            // Obtener especialidades
             axios.get(`http://localhost:3001/api/especialidades/${tatuaId}`)
                 .then(response => {
-                    console.log('Especialidades:', response.data); // Agregar console.log aquí
-                    setEspecialidades(response.data);
+                    const especialidades = response.data;
+                    setEspecialidades(especialidades);
                 })
                 .catch(error => {
                     console.error('Error fetching specialties:', error);
@@ -71,7 +72,7 @@ function InicioT_tat() {
 
             axios.post('http://localhost:3001/api/upload', formData)
                 .then(response => {
-                    console.log('Upload response:', response.data); // Agregar console.log aquí
+                    console.log('Upload response:', response.data);
                     handleCloseModal();
                     setEspecialidades(prevEspecialidades =>
                         prevEspecialidades.map(e =>
@@ -96,7 +97,7 @@ function InicioT_tat() {
                 }
             })
                 .then(response => {
-                    console.log('Delete response:', response.data); // Agregar console.log aquí
+                    console.log('Delete response:', response.data);
                     handleCloseModal();
                     setEspecialidades(prevEspecialidades =>
                         prevEspecialidades.map(e =>
@@ -121,7 +122,7 @@ function InicioT_tat() {
     return (
         <div>
             <div className="FondoA">
-                <nav className="navbar navbar-expand-lg bg-dark border-bottom border-body" data-bs-theme="dark">
+            <nav className="navbar navbar-expand-lg bg-dark border-bottom border-body" data-bs-theme="dark">
                     <div className="container-fluid">
                         <a className="navbar-brand" onClick={() => navigate('/inicio_tatuador')}>TATTOOARTE</a>
                         <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -148,63 +149,75 @@ function InicioT_tat() {
                         </div>
                     </div>
                 </nav>
-                <div className="text-center mt-5">
-                    <h2>El ID del Tatuador: {tatuaId}</h2>
-                    <h2>MIS ESPECIALIDADES DE {tatuaName}</h2>
-                </div>
-                <div className="container mt-4">
-                    <div className="row">
-                        {especialidades.map(especialidad => (
-                            <div key={especialidad.esp_id} className="col-md-4 mb-3">
-                                <div className={`card ${especialidad.status === 1 ? 'border-success' : 'border-secondary'}`}>
-                                    <div className="card-body">
-                                        <h5 className="card-title">{especialidad.esp_nombre}</h5>
-                                        <p className="card-text">{especialidad.esp_descripcion}</p>
-                                        {especialidad.ima_url &&
-                                            <>
-                                                <img src={`http://localhost:3001${especialidad.ima_url}`} alt="Imagen de especialidad" style={{ width: '100%', marginTop: '10px' }} />
-                                                <p>URL de la imagen: {especialidad.ima_url}</p>
-                                            </>
-                                        }
-                                        <Button variant="primary" onClick={() => handleShowModal(especialidad)}>Agregar imagen</Button>
+                <div className="container">
+                    <div className="row mt-5">
+                        <div className="col-md-12">
+                            <h3 className="text-center">{tatuaName} estas son tus especialidades de tatuajes </h3>
+                            <h3 className="text-center">El ID del Tatuador: {tatuaId}</h3>
+                            <hr />
+                            <div className="row">
+                                {especialidades.map((especialidad) => (
+                                    <div key={especialidad.esp_id} className="col-md-4 mb-4">
+                                        <div className="card">
+                                            <div className="card-body text-center">
+                                                <h5 className="card-title">{especialidad.esp_nombre}</h5>
+                                                <p className="card-text">{especialidad.esp_descripcion}</p>
+                                                {especialidad.status === 1 ? (
+                                                    <img
+                                                    src={especialidad.ima_url ? `http://localhost:3001${especialidad.ima_url}` : '/default-image.jpg'}
+                                                    className="card-img-top"
+                                                    alt={`Imagen de ${especialidad.esp_nombre}`}
+                                                    />) : (
+                                                    <p>No hay imagen</p>,
+                                                    <p className="card-text">{especialidad.ima_url}</p>
+                                                )}
+                                                <button
+                                                    className="btn btn-primary mt-3"
+                                                    onClick={() => handleShowModal(especialidad)}
+                                                >
+                                                    {especialidad.status === 1 ? 'Cambiar Imagen' : 'Agregar Imagen'}
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
+                                ))}
                             </div>
-                        ))}
+                        </div>
                     </div>
                 </div>
             </div>
-            {selectedEspecialidad && (
-                <Modal show={showModal} onHide={handleCloseModal}>
-                    <Modal.Header closeButton>
-                        <Modal.Title>Agregar Imagen a {selectedEspecialidad.esp_nombre}</Modal.Title>
-                    </Modal.Header>
-                    <Modal.Body>
-                        <Form>
-                            <Form.Group className="mb-3" controlId="formEspecialidad">
-                                <Form.Label>Especialidad</Form.Label>
-                                <Form.Control type="text" value={selectedEspecialidad.esp_nombre} readOnly />
-                            </Form.Group>
-                            <Form.Group className="mb-3" controlId="formImagen">
-                                <Form.Label>Subir Imagen</Form.Label>
-                                <Form.Control type="file" onChange={handleFileChange} />
-                                {imagePreview && <img src={imagePreview} alt="Preview" style={{ width: '100px', marginTop: '10px' }} />}
-                            </Form.Group>
-                        </Form>
-                    </Modal.Body>
-                    <Modal.Footer>
-                        <Button variant="secondary" onClick={handleCloseModal}>
-                            Cerrar
-                        </Button>
-                        <Button variant="primary" onClick={handleSaveChanges}>
-                            Guardar Cambios
-                        </Button>
+
+            <Modal show={showModal} onHide={handleCloseModal}>
+                <Modal.Header closeButton>
+                    <Modal.Title>{selectedEspecialidad ? selectedEspecialidad.esp_nombre : 'Subir Imagen'}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Form>
+                        <Form.Group controlId="formFile" className="mb-3">
+                            <Form.Label>Subir Imagen</Form.Label>
+                            <Form.Control type="file" onChange={handleFileChange} />
+                        </Form.Group>
+                        {imagePreview && (
+                            <div className="mb-3">
+                                <img src={imagePreview} alt="Preview" className="img-fluid" />
+                            </div>
+                        )}
+                    </Form>
+                </Modal.Body>
+                <Modal.Footer>
+                    {selectedEspecialidad && selectedEspecialidad.status === 1 && (
                         <Button variant="danger" onClick={handleDeleteImage}>
                             Eliminar Imagen
                         </Button>
-                    </Modal.Footer>
-                </Modal>
-            )}
+                    )}
+                    <Button variant="secondary" onClick={handleCloseModal}>
+                        Cancelar
+                    </Button>
+                    <Button variant="primary" onClick={handleSaveChanges}>
+                        Guardar Cambios
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </div>
     );
 }

@@ -362,9 +362,10 @@ app.post('/api/register', (req, res) => {
   
 // -----------------------------------------------------------------------------------------------------------------------------------
 // Ruta para obtener especialidades y el estado de la imagen
-app.get('/api/especialidades/:id_tat', (req, res) => {    const idTat = req.params.id_tat;
+app.get('/api/especialidades/:id_tat', (req, res) => {
+    const idTat = req.params.id_tat;
     const query = `
-        SELECT esp.*, img.status 
+        SELECT esp.*, img.status, img.ima_url 
         FROM especialidades esp 
         LEFT JOIN imagenes_pru img 
         ON esp.esp_id = img.esp_id AND img.id_tat = ?
@@ -381,10 +382,9 @@ app.get('/api/especialidades/:id_tat', (req, res) => {    const idTat = req.para
 // Ruta para manejar la carga de imágenes
 app.post('/api/upload', upload.single('image'), (req, res) => {
     const { esp_id, id_tat } = req.body;
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null; // Ruta del archivo cargado
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
     if (imageUrl) {
-        // Verificar si ya existe una imagen para la especialidad y tatuador
         const checkImageQuery = 'SELECT * FROM imagenes_pru WHERE esp_id = ? AND id_tat = ?';
         db.query(checkImageQuery, [esp_id, id_tat], (err, results) => {
             if (err) {
@@ -392,7 +392,6 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
             }
 
             if (results.length > 0) {
-                // Ya existe una imagen, actualizar la URL y el estado
                 const updateImageQuery = 'UPDATE imagenes_pru SET ima_url = ?, status = 1 WHERE esp_id = ? AND id_tat = ?';
                 db.query(updateImageQuery, [imageUrl, esp_id, id_tat], (err) => {
                     if (err) {
@@ -401,7 +400,6 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
                     res.status(200).json({ message: 'Image updated successfully', ima_url: imageUrl });
                 });
             } else {
-                // No existe una imagen, insertar una nueva
                 const insertImageQuery = 'INSERT INTO imagenes_pru (esp_id, ima_url, id_tat, status) VALUES (?, ?, ?, 1)';
                 db.query(insertImageQuery, [esp_id, imageUrl, id_tat], (err) => {
                     if (err) {

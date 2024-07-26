@@ -23,6 +23,13 @@
     background-repeat: no-repeat;
     color: black;
   }
+
+  .card-img-top {
+    width: 100%; /* Ajusta al tamaño del contenedor */
+    height: auto; /* Mantiene la proporción de la imagen */
+    max-height: 200px; /* Establece una altura máxima */
+    object-fit: cover; /* Asegura que la imagen cubra el área sin distorsionar */
+}
   
 /* :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
