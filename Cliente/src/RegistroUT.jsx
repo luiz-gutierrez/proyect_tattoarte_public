@@ -115,7 +115,6 @@ function RegistroUT() {
           </div>
         </div>
       </nav>
-      <div>Registro Tatuador</div>
       <div className="cuadro">
         <h2>DATOS PERSONALES</h2>
         <form onSubmit={handleSubmit}>
