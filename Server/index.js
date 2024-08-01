@@ -40,7 +40,7 @@ db.connect(err => {
         console.error('Error connecting to the database:', err); // Muestra error de conexión
         return;
     }
-    console.log('Connected to the database'); // Mensaje de éxito en la conexión
+    console.log('Conectado a la base de datos'); // Mensaje de éxito en la conexión
 });
 
 // Ruta de autenticación
@@ -58,6 +58,7 @@ app.post('/api/login', (req, res) => {
             const admin = adminResults[0];
 
             if (password === admin.adm_password) {
+                console.log('Admin encontrado:', admin);
                 return res.status(200).json({ 
                     message: 'Autenticación exitosa', 
                     userType: 'admin', 
@@ -78,11 +79,14 @@ app.post('/api/login', (req, res) => {
                     const tatuador = tatuadorResults[0];
 
                     if (password === tatuador.password) {
+                        console.log('Tatuador encontrado:', tatuador);
                         return res.status(200).json({ 
                             message: 'Autenticación exitosa', 
                             userType: 'tatuador', 
+                            tatuaId: tatuador.Id,
                             tatuaName: tatuador.nombre, 
-                            tatuaId: tatuador.Id 
+                            tatuaApellido: tatuador.apellido, 
+                            tatuaTelefono: tatuador.telefono
                         });
                     } else {
                         return res.status(401).json({ message: 'Contraseña incorrecta' });
@@ -99,6 +103,7 @@ app.post('/api/login', (req, res) => {
                             const viewer = viewerResults[0];
 
                             if (password === viewer.viw_password) {
+                                console.log('Viewer encontrado:', viewer);
                                 return res.status(200).json({ 
                                     message: 'Autenticación exitosa', 
                                     userType: 'viewer', 
@@ -117,6 +122,7 @@ app.post('/api/login', (req, res) => {
         }
     });
 });
+
 
 // Ruta para manejar la carga de imágenes
 // app.post('/api/upload', upload.single('image'), (req, res) => {
@@ -212,6 +218,46 @@ app.get('/api/tatuadores', (req, res) => {
         res.json(result); // Responde con los datos en formato JSON
     });
 });
+
+// Endpoint para obtener detalles del tatuador por ID
+app.get('/api/tatuador/:id', (req, res) => {
+    const id = req.params.id;
+
+    // Consulta SQL para obtener los detalles del tatuador
+    const query = 'SELECT nombre, apellido, telefono, email FROM tatuadores WHERE Id = ?';
+    db.query(query, [id], (err, results) => {
+        if (err) {
+            console.error('Error al ejecutar la consulta', err);
+            return res.status(500).json({ error: 'Error al obtener los detalles del tatuador' });
+        }
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'Tatuador no encontrado' });
+        }
+        res.json(results[0]); // Devuelve el primer resultado
+    });
+});
+
+// Actualizar los detalles del tatuador
+app.put('/api/tatuador/:id', (req, res) => {
+    const { id } = req.params;
+    const { nombre, apellido, telefono, email } = req.body;
+    const query = `
+        UPDATE tatuadores
+        SET nombre = ?, apellido = ?, telefono = ?, email = ?
+        WHERE Id = ?
+    `;
+
+    db.query(query, [nombre, apellido, telefono, email, id], (error, results) => {
+        if (error) {
+            console.error('Error al ejecutar la consulta:', error);
+            return res.status(500).json({ error: 'Error al actualizar los detalles del tatuador' });
+        }
+        res.status(200).json({ message: 'Detalles actualizados correctamente' });
+    });
+});
+
+
+
 
 // Rutas relacionadas con especialidades
 // Ruta para obtener todas las especialidades
@@ -343,8 +389,8 @@ app.post('/api/register', (req, res) => {
         }
   
         // Insertar redes sociales en la tabla `redes_sociales`
-        const insertRedesQuery = 'INSERT INTO redes_sociales (red_tiktok, red_facebook, red_whatsapp, red_instagram) VALUES (?, ?, ?, ?)';
-        const redesValues = [tatuador.red_tiktok, tatuador.red_facebook, tatuador.red_whatsapp, tatuador.red_instagram];
+        const insertRedesQuery = 'INSERT INTO redes_sociales (red_tiktok, red_facebook, red_whatsapp, red_instagram, id_tat) VALUES (?, ?, ?, ?, ?)';
+        const redesValues = [tatuador.red_tiktok, tatuador.red_facebook, tatuador.red_whatsapp, tatuador.red_instagram, tatuadorId];
   
         db.query(insertRedesQuery, redesValues, (err) => {
           if (err) {
@@ -426,6 +472,35 @@ app.delete('/api/delete-image', (req, res) => {
         res.status(200).json({ message: 'Image deleted successfully' });
     });
 });
+// -----------------------------------------------------------------------------------------------
+
+// Endpoint para obtener las redes sociales de un tatuador
+app.get('/api/tatuadores/:id/redes_sociales', (req, res) => {
+    const tatuaId = req.params.id;
+
+    const query = `
+        SELECT red_facebook, red_whatsapp, red_tiktok, red_instagram
+        FROM redes_sociales
+        WHERE id_tat = ?
+    `;
+
+    db.query(query, [tatuaId], (err, results) => {
+        if (err) {
+            console.error('Error fetching social networks:', err);
+            res.status(500).json({ error: 'Internal server error' });
+            return;
+        }
+
+        if (results.length === 0) {
+            res.status(404).json({ message: 'No social networks found for this tattoo artist' });
+            return;
+        }
+
+        res.json(results[0]);
+    });
+});
+
+
 
 // Iniciar el servidor
 app.listen(port, () => {
