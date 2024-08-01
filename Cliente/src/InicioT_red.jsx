@@ -61,21 +61,6 @@ function InicioT_red() {
         }));
     };
 
-    const handleSave = async () => {
-        try {
-            console.log('Datos a enviar:', socialNetworks);
-            const response = await axios.put(`http://localhost:3001/api/tatuadores/${tatuaId}/redes_sociales`, socialNetworks);
-            console.log('Response from server:', response.data);
-            setAlert({ show: true, message: 'Los cambios se han guardado correctamente.', type: 'success' });
-        } catch (error) {
-            console.error('Error updating social networks:', error.message);
-            console.log('Error details:', error.response);
-            setAlert({ show: true, message: 'Error al guardar los cambios.', type: 'danger' });
-        }
-    };
-    
-    
-
     return (
         <div>
             <div className="FondoA">
@@ -157,7 +142,7 @@ function InicioT_red() {
                                         onChange={handleChange}
                                     />
                                 </div>
-                                <button type="button" className="btn btn-primary" onClick={handleSave}>Guardar cambios</button>
+                                {/* Botón de guardar cambios eliminado */}
                             </div>
                         ) : (
                             <p>Cargando redes sociales...</p>
