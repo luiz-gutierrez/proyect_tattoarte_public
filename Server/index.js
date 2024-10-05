@@ -4,6 +4,7 @@ const path = require('path'); // Importa Path para trabajar con rutas de archivo
 const bodyParser = require('body-parser'); // Importa Body-Parser para procesar datos de formularios
 const mysql = require('mysql'); // Importa MySQL para interactuar con la base de datos
 const cors = require('cors'); // Importa CORS para permitir solicitudes desde diferentes dominios
+const moment = require('moment-timezone'); // Asegúrate de tener esta librería para manejar fechas
 
 const app = express(); // Crea una instancia de la aplicación Express
 const port = 3001; // Define el puerto en el que el servidor escuchará
@@ -364,48 +365,63 @@ app.get('/api/imagenes_pru', (req, res) => {
 // Configuración de archivos estáticos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Permite servir archivos estáticos desde la carpeta 'uploads'
 
+//registro del tatuador
 app.post('/api/register', (req, res) => {
     const tatuador = req.body;
     const especialidades = tatuador.especialidades; // Este es el array de especialidades
-  
-    // Insertar tatuador en la tabla `tatuadores`
-    const insertTatuadorQuery = 'INSERT INTO tatuadores (nombre, apellido, telefono, email, password) VALUES (?, ?, ?, ?, ?)';
-    const tatuadorValues = [tatuador.nombre, tatuador.apellido, tatuador.telefono, tatuador.email, tatuador.password];
-  
-    db.query(insertTatuadorQuery, tatuadorValues, (err, result) => {
-      if (err) {
-        return res.status(500).json({ message: 'Error al registrar el tatuador', error: err });
-      }
-  
-      const tatuadorId = result.insertId;
-  
-      // Insertar dirección en la tabla `direcciones`
-      const insertDireccionQuery = 'INSERT INTO direcciones (dir_calle, dir_numero_ext, dir_colonia, dir_cp, dir_municipio, dir_estado, dir_localidad) VALUES (?, ?, ?, ?, ?, ?, ?)';
-      const direccionValues = [tatuador.dir_calle, tatuador.dir_numero_ext, tatuador.dir_colonia, tatuador.dir_cp, tatuador.dir_municipio, tatuador.dir_estado, tatuador.dir_localidad];
-  
-      db.query(insertDireccionQuery, direccionValues, (err) => {
-        if (err) {
-          return res.status(500).json({ message: 'Error al registrar la dirección', error: err });
-        }
-  
-        // Insertar redes sociales en la tabla `redes_sociales`
-        const insertRedesQuery = 'INSERT INTO redes_sociales (red_tiktok, red_facebook, red_whatsapp, red_instagram, id_tat) VALUES (?, ?, ?, ?, ?)';
-        const redesValues = [tatuador.red_tiktok, tatuador.red_facebook, tatuador.red_whatsapp, tatuador.red_instagram, tatuadorId];
-  
-        db.query(insertRedesQuery, redesValues, (err) => {
-          if (err) {
-            return res.status(500).json({ message: 'Error al registrar las redes sociales', error: err });
-          }
-    
-            res.status(201).json({ message: 'Tatuador registrado exitosamente', tatuaId: tatuadorId });
-          });
 
-      });
+    // Insertar tatuador en la tabla `tatuadores`
+    const insertTatuadorQuery = 'INSERT INTO tatuadores (nombre, apellido, telefono, email, password, id_pla) VALUES (?, ?, ?, ?, ?, ?)';
+    const tatuadorValues = [tatuador.nombre, tatuador.apellido, tatuador.telefono, tatuador.email, tatuador.password, 3]; // Plan Prueba ID 3
+
+    db.query(insertTatuadorQuery, tatuadorValues, (err, result) => {
+        if (err) {
+            return res.status(500).json({ message: 'Error al registrar el tatuador', error: err });
+        }
+
+        const tatuadorId = result.insertId; // Obtenemos el ID del tatuador recién insertado
+
+        // Insertar dirección en la tabla `direcciones`
+        const insertDireccionQuery = 'INSERT INTO direcciones (dir_calle, dir_numero_ext, dir_colonia, dir_cp, dir_municipio, dir_estado, dir_localidad) VALUES (?, ?, ?, ?, ?, ?, ?)';
+        const direccionValues = [tatuador.dir_calle, tatuador.dir_numero_ext, tatuador.dir_colonia, tatuador.dir_cp, tatuador.dir_municipio, tatuador.dir_estado, tatuador.dir_localidad];
+
+        db.query(insertDireccionQuery, direccionValues, (err) => {
+            if (err) {
+                return res.status(500).json({ message: 'Error al registrar la dirección', error: err });
+            }
+
+            // Insertar redes sociales en la tabla `redes_sociales`
+            const insertRedesQuery = 'INSERT INTO redes_sociales (red_tiktok, red_facebook, red_whatsapp, red_instagram, id_tat) VALUES (?, ?, ?, ?, ?)';
+            const redesValues = [tatuador.red_tiktok, tatuador.red_facebook, tatuador.red_whatsapp, tatuador.red_instagram, tatuadorId];
+
+            db.query(insertRedesQuery, redesValues, (err) => {
+                if (err) {
+                    return res.status(500).json({ message: 'Error al registrar las redes sociales', error: err });
+                }
+
+                // Crear factura para el tatuador
+                const planPruebaId = 3; // Plan Prueba con ID 3
+                const fechaEmision = moment.tz('America/Mexico_City').format('YYYY-MM-DD'); // Fecha de emisión actual en la zona horaria de CDMX
+                const fechaVencimiento = moment.tz('America/Mexico_City').add(1, 'month').format('YYYY-MM-DD'); // Fecha de vencimiento (1 mes después)
+                const monto = 0.00; // Costo del plan de prueba
+                const estadoPago = 'no pagado'; // Estado de pago inicial
+
+                const insertFacturaQuery = 'INSERT INTO facturas (id_tat, id_pla, fecha_emision, fecha_vencimiento, monto, estado_pago) VALUES (?, ?, ?, ?, ?, ?)';
+                const facturaValues = [tatuadorId, planPruebaId, fechaEmision, fechaVencimiento, monto, estadoPago];
+
+                db.query(insertFacturaQuery, facturaValues, (err) => {
+                    if (err) {
+                        return res.status(500).json({ message: 'Error al registrar la factura', error: err });
+                    }
+
+                    // Todo se registró correctamente
+                    res.status(201).json({ message: 'Tatuador y factura registrados exitosamente', tatuaId: tatuadorId });
+                });
+            });
+        });
     });
-  });
-  
-  
-  
+});
+
 // -----------------------------------------------------------------------------------------------------------------------------------
 // Ruta para obtener especialidades y el estado de la imagen
 app.get('/api/especialidades/:id_tat', (req, res) => {
@@ -499,6 +515,38 @@ app.get('/api/tatuadores/:id/redes_sociales', (req, res) => {
         res.json(results[0]);
     });
 });
+// ---------------------------------------------------------------------------------------
+app.get('/api/plan/:id_tat', (req, res) => {
+    const tatuadorId = req.params.id_tat;
+
+    const query = `
+      SELECT 
+          planes.pla_nombre, 
+          planes.pla_descripcion, 
+          planes.pla_duracion, 
+          planes.pla_monto,
+          facturas.fecha_emision,
+          facturas.fecha_vencimiento
+      FROM tatuadores 
+      INNER JOIN planes ON tatuadores.id_pla = planes.pla_id 
+      INNER JOIN facturas ON facturas.id_tat = tatuadores.id
+      WHERE tatuadores.id = ?`;
+
+    db.query(query, [tatuadorId], (err, result) => {
+        if (err) {
+            return res.status(500).json({ message: 'Error al obtener el plan', error: err });
+        }
+
+        if (result.length > 0) {
+            res.status(200).json(result[0]); // Enviar el plan encontrado
+        } else {
+            res.status(404).json({ message: 'Plan no encontrado' });
+        }
+    });
+});
+
+
+// -----------------------------------------------------------------------------------------
 
 
 

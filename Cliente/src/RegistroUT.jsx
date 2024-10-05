@@ -65,33 +65,43 @@ function RegistroUT() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validateForm()) {
-        fetch('http://localhost:3001/api/register', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                ...formData,
-                especialidades: especialidades.map(esp => ({ esp_id: esp.esp_id, status: 0 })) // Guardar todas las especialidades con estado 0
-            })
+      fetch('http://localhost:3001/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          especialidades: especialidades.map(esp => ({ esp_id: esp.esp_id, status: 0 })) // Guardar todas las especialidades con estado 0
+        }),
+      })
+        .then(response => {
+          // Comprobar si la respuesta es exitosa (status 200-299)
+          if (!response.ok) {
+            throw new Error('Error en la respuesta del servidor');
+          }
+          return response.json();
         })
-        .then(response => response.json())
         .then(data => {
-            console.log('Success:', data);
-            if (data.message === 'Tatuador registrado exitosamente') {
-                localStorage.setItem('tatuaName', formData.nombre);
-                localStorage.setItem('tatuaId', data.tatuaId);
-                navigate('/inicio_tatuador');
-            } else {
-                console.error('Error en el registro:', data.message);
-            }
+          console.log('Response:', data); // Asegúrate de ver toda la respuesta aquí
+          // Cambiar la condición para que verifique el mensaje correcto
+          if (data.message.includes('Tatuador y factura registrados exitosamente')) {
+            localStorage.setItem('tatuaName', formData.nombre);
+            localStorage.setItem('tatuaId', data.tatuaId);
+            navigate('/inicio_tatuador'); // Redireccionar si el registro es exitoso
+          } else {
+            // Manejar el mensaje de error correctamente
+            console.error('Error en el registro:', data.message);
+            // Aquí podrías mostrar un mensaje de error en la UI si lo deseas
+          }
         })
         .catch((error) => {
-            console.error('Error:', error);
+          console.error('Error en la solicitud:', error);
+          // Aquí podrías mostrar un mensaje de error en la UI si lo deseas
         });
     }
   };
-
+  
   return (
     <div className="Fondo1">
       <nav className="navbar navbar-expand-lg bg-dark border-bottom border-body" data-bs-theme="dark">
