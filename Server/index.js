@@ -545,6 +545,32 @@ app.get('/api/plan/:id_tat', (req, res) => {
     });
 });
 
+// -----------------------------------------------------------------------------------------
+
+
+// Ruta para obtener facturas con los nombres de los tatuadores
+app.get('/api/facturas', (req, res) => {
+    const sql = `
+        SELECT 
+            f.fac_id,
+            f.fecha_emision,
+            f.fecha_vencimiento,
+            f.monto,
+            f.estado_pago,
+            t.nombre AS nombre_tat,
+            t.apellido AS apellido_tat
+        FROM 
+            facturas f
+        JOIN 
+            tatuadores t ON f.id_tat = t.id
+    `;
+    db.query(sql, (err, result) => {
+        if (err) throw err;
+        res.json(result);
+    });
+});
+
+
 
 // -----------------------------------------------------------------------------------------
 
