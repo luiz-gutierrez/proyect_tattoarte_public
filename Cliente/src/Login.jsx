@@ -5,13 +5,23 @@ import axios from 'axios';
 
 function Login() {
     const [show, setShow] = useState(false);
+    const [showEmailModal, setShowEmailModal] = useState(false); // Estado para el modal del correo
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [emailToVerify, setEmailToVerify] = useState('');
+    const [verificationCode, setVerificationCode] = useState('');
+    const [generatedCode, setGeneratedCode] = useState('');
+    const [isEmailVerified, setIsEmailVerified] = useState(false);
+    const [profileType, setProfileType] = useState(''); // To track if it's 'tatuador' or 'viewer'
     const navigate = useNavigate();
 
-    const handleClose = () => setShow(false);
+    const handleClose = () => {
+        setShow(false);
+        setShowEmailModal(false); // Cierra el modal del correo
+    };
     const handleShow = () => setShow(true);
+    const handleShowEmailModal = () => setShowEmailModal(true); // Mostrar modal de correo
 
     const redirectToUrl = (path) => {
         navigate(path);
@@ -49,103 +59,175 @@ function Login() {
         }
     };
 
+    // Función para enviar el código de verificación por correo
+    const handleEmailVerification = async () => {
+        try {
+            const response = await axios.post('http://localhost:3001/api/sendVerificationCode', { email: emailToVerify });
+            console.log('Código enviado:', response.data.code);
+            setGeneratedCode(response.data.code); // Guarda el código generado
+            setShowEmailModal(false); // Cierra el modal del correo
+        } catch (error) {
+            console.error('Error sending verification code:', error);
+        }
+    };
+
+    // Verificar si el código ingresado coincide con el código generado
+    const handleVerifyCode = () => {
+        if (verificationCode === generatedCode) {
+            setIsEmailVerified(true); // Verificación exitosa
+            handleClose(); // Cierra el modal
+            // Redirige al formulario del perfil seleccionado
+            navigate(profileType === 'tatuador' ? '/registro_tatuador' : '/registro_viewer');
+        } else {
+            setError('Código de verificación incorrecto');
+        }
+    };
+
     return (
-    <div>
-      <div className="Fondo2">
-        <nav className="navbar navbar-expand-lg bg-dark border-bottom border-body" data-bs-theme="dark">
-          <div className="container-fluid">
-            <a className="navbar-brand" href="#">TATTOOARTE</a>
-            <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-              <span className="navbar-toggler-icon"></span>
-            </button>
-            <div className="collapse navbar-collapse" id="navbarNav">
-              <ul className="navbar-nav">
-                <li className="nav-item">
-                  <a className="nav-link active" aria-current="page" href="#">INICIO</a>
-                </li>
-                <li className="nav-item">
-                  <a className="nav-link" href="#">¿QUE ES TATTOOARTE?</a>
-                </li>
-                <li className="nav-item">
-                  <a className="nav-link" href="#">TEXTO 2</a>
-                </li>
-              </ul>
+        <div>
+            <div className="Fondo2">
+                <nav className="navbar navbar-expand-lg bg-dark border-bottom border-body" data-bs-theme="dark">
+                    <div className="container-fluid">
+                        <a className="navbar-brand" href="#">TATTOOARTE</a>
+                        <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                            <span className="navbar-toggler-icon"></span>
+                        </button>
+                        <div className="collapse navbar-collapse" id="navbarNav">
+                            <ul className="navbar-nav">
+                                <li className="nav-item">
+                                    <a className="nav-link active" aria-current="page" href="#">INICIO</a>
+                                </li>
+                                <li className="nav-item">
+                                    <a className="nav-link" href="#">¿QUE ES TATTOOARTE?</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </nav>
+
+                <div className="cuadro">
+                    <div className="text-center mt-5">
+                        <h2>BIENVENIDOS</h2>
+                        <div className="row">
+                            <div className="col">
+                                <input 
+                                    type="text" 
+                                    className="form-control" 
+                                    placeholder="CORREO" 
+                                    aria-label="First name"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                />
+                                <br />
+                                <input 
+                                    type="password" 
+                                    className="form-control" 
+                                    placeholder="CONTRASEÑA" 
+                                    aria-label="First name"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                />
+                                <br />
+                                {error && <div className="alert alert-danger d-inline-flex p-2 bd-highlight" role="alert">
+                                    {error}
+                                </div>}
+                            </div>
+                        </div>
+                        <button type="button" className="btn btn-secondary" onClick={handleLogin}>INICIAR SESION</button>
+                    </div>
+                    <div className="row text-center mt-5">
+                        <div className="col">
+                            <p className="text-decoration-underline text-info">OLVIDE CONTRASEÑA</p>
+                        </div>
+                        <div className="col">
+                            <p className="text-decoration-underline text-info" onClick={handleShow}>CREAR CUENTA</p>
+                            <br />
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
-        </nav>
-        <div className="cuadro">
-          <div className="text-center mt-5">
-            <h2>BIENVENIDOS</h2>
-            <div className="row">
-              <div className="col">
-                <input 
-                  type="text" 
-                  className="form-control" 
-                  placeholder="CORREO" 
-                  aria-label="First name"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-                <br />
-                <input 
-                  type="password" 
-                  className="form-control" 
-                  placeholder="CONTRASEÑA" 
-                  aria-label="First name"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <br />
-                {error && <div className="alert alert-danger d-inline-flex p-2 bd-highlight" role="alert">
-                  {error}
-                </div>}
-              </div>
-            </div>
-            <button type="button" className="btn btn-secondary" onClick={handleLogin}>INICIAR SESION</button>
-          </div>
-          <div className="row text-center mt-5">
-            <div className="col">
-              <p className="text-decoration-underline text-info">OLVIDE CONTRASEÑA</p>
-            </div>
-            <div className="col">
-              <p className="text-decoration-underline text-info" onClick={handleShow}>CREAR CUENTA</p>
-              <br />
-            </div>
-          </div>
+
+            <Modal className='modal-lg' show={show} onHide={handleClose}>
+                <Modal.Header closeButton>
+                    <Modal.Title>¿Qué tipo de perfil deseas crear?</Modal.Title>
+                </Modal.Header>
+                <Modal.Body className="d-flex justify-content-around">
+                    <Button className="m-2" variant="outline-success" onClick={() => {
+                        setProfileType('tatuador');
+                        handleShowEmailModal(); // Abre el modal de correo
+                    }}>
+                        <div>
+                            <h3>TATUADOR</h3>
+                            <p>
+                                Podrás mostrar tus especialidades, diseños, ubicación de estudio, redes sociales para tus futuros clientes.
+                            </p>
+                        </div>
+                    </Button>
+
+                    <Button className="m-2" variant="outline-success" onClick={() => {
+                        setProfileType('viewer');
+                        handleShowEmailModal(); // Abre el modal de correo
+                    }}>
+                        <div>
+                            <h3>CLIENTE</h3>
+                            <p>
+                                Podrás visualizar los perfiles de los tatuadores (especialidades, diseños, ubicación de estudio, redes sociales), para hacerte tu tatuaje.
+                            </p>
+                        </div>
+                    </Button>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={handleClose}>Cerrar</Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Modal para ingresar el correo y enviar el código de verificación */}
+            <Modal show={showEmailModal} onHide={handleClose}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Ingrese su Correo Electrónico</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Correo Electrónico"
+                        value={emailToVerify}
+                        onChange={(e) => setEmailToVerify(e.target.value)}
+                    />
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={handleClose}>Cerrar</Button>
+                    <Button variant="primary" onClick={handleEmailVerification}>Enviar Código</Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Modal para la verificación del correo */}
+            <Modal show={!!generatedCode} onHide={handleClose}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Verificación de Correo</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {!isEmailVerified ? (
+                        <div>
+                            <input
+                                type="text"
+                                className="form-control"
+                                placeholder="Código de Verificación"
+                                value={verificationCode}
+                                onChange={(e) => setVerificationCode(e.target.value)}
+                            />
+                        </div>
+                    ) : (
+                        <div>Verificación exitosa. Procediendo a la creación del perfil.</div>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={handleClose}>Cerrar</Button>
+                    {!isEmailVerified && <Button variant="primary" onClick={handleVerifyCode}>Verificar Código</Button>}
+                </Modal.Footer>
+            </Modal>
         </div>
-      </div>
-
-      <Modal className='modal-lg' show={show} onHide={handleClose}>
-        <Modal.Header closeButton>
-          <Modal.Title>¿Qué tipo de perfil deseas crear?</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="d-flex justify-content-around">
-          <Button className="m-2" variant="outline-success" onClick={() => redirectToUrl('/registro_tatuador')}>
-            <div>
-              <h3>TATUADOR</h3>
-              <p>
-                Podrás mostrar tus especialidades, diseños, ubicación de estudio, redes sociales para tus futuros clientes.
-              </p>
-            </div>
-          </Button>
-
-          <Button className="m-2" variant="outline-success" onClick={() => redirectToUrl('/registro_viwer')}>
-            <div>
-              <h3>CLIENTE</h3>
-              <p>
-                Podrás visualizar los perfiles de los tatuadores (especialidades, diseños, ubicación de estudio, redes sociales), para hacerte tu tatuaje.
-              </p>
-            </div>
-          </Button>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleClose}>
-            Cerrar
-          </Button>
-        </Modal.Footer>
-      </Modal>
-    </div>
-  );
+    );
 }
 
 export default Login;

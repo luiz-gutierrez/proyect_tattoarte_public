@@ -570,9 +570,34 @@ app.get('/api/facturas', (req, res) => {
     });
 });
 
-
-
 // -----------------------------------------------------------------------------------------
+
+app.post('/api/sendVerificationCode', (req, res) => {
+    const { email } = req.body;
+    if (!email) {
+        return res.status(400).json({ message: 'El correo electrónico es requerido.' });
+    }
+
+    generatedCode = Math.floor(100000 + Math.random() * 900000).toString(); // Genera un código de 6 dígitos
+
+    const mailOptions = {
+        from: 'tattooarteadm@gmail.com',
+        to: email,
+        subject: 'Código de Verificación',
+        text: `Tu código de verificación es: ${generatedCode}`,
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            console.log(error);
+            res.status(500).send('Error enviando el correo de verificación');
+        } else {
+            console.log('Correo enviado: ' + info.response);
+            res.status(200).json({ code: generatedCode }); // Devuelve el código generado al frontend
+        }
+    });
+    res.status(200).json({ code: generatedCode });
+});
 
 
 
