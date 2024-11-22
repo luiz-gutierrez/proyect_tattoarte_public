@@ -74,28 +74,14 @@ function Login() {
     // Verificar si el código ingresado coincide con el código generado
     const handleVerifyCode = () => {
         if (verificationCode === generatedCode) {
-            setIsEmailVerified(true);
-            handleClose();
-            // Redirige al formulario correspondiente con el email verificado
-            if (profileType === 'tatuador') {
-                navigate('/registro_tatuador', {
-                    state: {
-                        verifiedEmail: emailToVerify
-                    }
-                });
-            } else {
-                navigate('/registro_viewer', {
-                    state: {
-                        verifiedEmail: emailToVerify
-                    }
-                });
-            }
+            setIsEmailVerified(true); // Verificación exitosa
+            handleClose(); // Cierra el modal
+            // Redirige al formulario del perfil seleccionado
+            navigate(profileType === 'tatuador' ? '/registro_tatuador' : '/registro_viewer');
         } else {
             setError('Código de verificación incorrecto');
         }
-      };
-
-    
+    };
 
     return (
         <div>

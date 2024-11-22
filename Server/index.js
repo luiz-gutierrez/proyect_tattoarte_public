@@ -5,6 +5,7 @@ const bodyParser = require('body-parser'); // Importa Body-Parser para procesar 
 const mysql = require('mysql'); // Importa MySQL para interactuar con la base de datos
 const cors = require('cors'); // Importa CORS para permitir solicitudes desde diferentes dominios
 const moment = require('moment-timezone'); // Asegúrate de tener esta librería para manejar fechas
+const nodemailer = require('nodemailer');
 
 const app = express(); // Crea una instancia de la aplicación Express
 const port = 3001; // Define el puerto en el que el servidor escuchará
@@ -26,6 +27,16 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage }); // Configura Multer con la configuración de almacenamiento
+
+let generatedCode = ''; // Almacenar temporalmente el código generado
+// Configuración de Nodemailer para enviar correos
+const transporter = nodemailer.createTransport({
+    service: 'gmail', // o cualquier otro servicio que prefieras usar
+    auth: {
+        user: 'tattooarteadm@gmail.com', // Tu correo de envío
+        pass: 'aewswhdnsyalhdeb', // Contraseña del correo
+    },
+});
 
 // Configuración de la base de datos
 const db = mysql.createConnection({
@@ -368,54 +379,47 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Permite
 //registro del tatuador
 app.post('/api/register', (req, res) => {
     const tatuador = req.body;
-    const especialidades = tatuador.especialidades; // Este es el array de especialidades
+    const especialidades = tatuador.especialidades;
 
-    // Insertar tatuador en la tabla `tatuadores`
-    const insertTatuadorQuery = 'INSERT INTO tatuadores (nombre, apellido, telefono, email, password, id_pla) VALUES (?, ?, ?, ?, ?, ?)';
-    const tatuadorValues = [tatuador.nombre, tatuador.apellido, tatuador.telefono, tatuador.email, tatuador.password, 3]; // Plan Prueba ID 3
-
-    db.query(insertTatuadorQuery, tatuadorValues, (err, result) => {
+    // Verificar si el email ya existe
+    const checkEmailQuery = 'SELECT COUNT(*) AS count FROM tatuadores WHERE email = ?';
+    db.query(checkEmailQuery, [tatuador.email], (err, result) => {
         if (err) {
-            return res.status(500).json({ message: 'Error al registrar el tatuador', error: err });
+            return res.status(500).json({ message: 'Error al verificar el correo', error: err });
         }
 
-        const tatuadorId = result.insertId; // Obtenemos el ID del tatuador recién insertado
+        if (result[0].count > 0) {
+            return res.status(400).json({ message: 'El correo ya está registrado' });
+        }
 
-        // Insertar dirección en la tabla `direcciones`
-        const insertDireccionQuery = 'INSERT INTO direcciones (dir_calle, dir_numero_ext, dir_colonia, dir_cp, dir_municipio, dir_estado, dir_localidad) VALUES (?, ?, ?, ?, ?, ?, ?)';
-        const direccionValues = [tatuador.dir_calle, tatuador.dir_numero_ext, tatuador.dir_colonia, tatuador.dir_cp, tatuador.dir_municipio, tatuador.dir_estado, tatuador.dir_localidad];
+        // Continuar con el registro si el correo no existe
+        const insertTatuadorQuery = 'INSERT INTO tatuadores (nombre, apellido, telefono, email, password, id_pla) VALUES (?, ?, ?, ?, ?, ?)';
+        const tatuadorValues = [tatuador.nombre, tatuador.apellido, tatuador.telefono, tatuador.email, tatuador.password, 3];
 
-        db.query(insertDireccionQuery, direccionValues, (err) => {
+        db.query(insertTatuadorQuery, tatuadorValues, (err, result) => {
             if (err) {
-                return res.status(500).json({ message: 'Error al registrar la dirección', error: err });
+                return res.status(500).json({ message: 'Error al registrar el tatuador', error: err });
             }
 
-            // Insertar redes sociales en la tabla `redes_sociales`
-            const insertRedesQuery = 'INSERT INTO redes_sociales (red_tiktok, red_facebook, red_whatsapp, red_instagram, id_tat) VALUES (?, ?, ?, ?, ?)';
-            const redesValues = [tatuador.red_tiktok, tatuador.red_facebook, tatuador.red_whatsapp, tatuador.red_instagram, tatuadorId];
+            const tatuadorId = result.insertId;
 
-            db.query(insertRedesQuery, redesValues, (err) => {
+            const insertDireccionQuery = 'INSERT INTO direcciones (dir_calle, dir_numero_ext, dir_colonia, dir_cp, dir_municipio, dir_estado, dir_localidad) VALUES (?, ?, ?, ?, ?, ?, ?)';
+            const direccionValues = [tatuador.dir_calle, tatuador.dir_numero_ext, tatuador.dir_colonia, tatuador.dir_cp, tatuador.dir_municipio, tatuador.dir_estado, tatuador.dir_localidad];
+
+            db.query(insertDireccionQuery, direccionValues, (err) => {
                 if (err) {
-                    return res.status(500).json({ message: 'Error al registrar las redes sociales', error: err });
+                    return res.status(500).json({ message: 'Error al registrar la dirección', error: err });
                 }
 
-                // Crear factura para el tatuador
-                const planPruebaId = 3; // Plan Prueba con ID 3
-                const fechaEmision = moment.tz('America/Mexico_City').format('YYYY-MM-DD'); // Fecha de emisión actual en la zona horaria de CDMX
-                const fechaVencimiento = moment.tz('America/Mexico_City').add(1, 'month').format('YYYY-MM-DD'); // Fecha de vencimiento (1 mes después)
-                const monto = 0.00; // Costo del plan de prueba
-                const estadoPago = 'no pagado'; // Estado de pago inicial
+                const insertRedesQuery = 'INSERT INTO redes_sociales (red_tiktok, red_facebook, red_whatsapp, red_instagram, id_tat) VALUES (?, ?, ?, ?, ?)';
+                const redesValues = [tatuador.red_tiktok, tatuador.red_facebook, tatuador.red_whatsapp, tatuador.red_instagram, tatuadorId];
 
-                const insertFacturaQuery = 'INSERT INTO facturas (id_tat, id_pla, fecha_emision, fecha_vencimiento, monto, estado_pago) VALUES (?, ?, ?, ?, ?, ?)';
-                const facturaValues = [tatuadorId, planPruebaId, fechaEmision, fechaVencimiento, monto, estadoPago];
-
-                db.query(insertFacturaQuery, facturaValues, (err) => {
+                db.query(insertRedesQuery, redesValues, (err) => {
                     if (err) {
-                        return res.status(500).json({ message: 'Error al registrar la factura', error: err });
+                        return res.status(500).json({ message: 'Error al registrar las redes sociales', error: err });
                     }
 
-                    // Todo se registró correctamente
-                    res.status(201).json({ message: 'Tatuador y factura registrados exitosamente', tatuaId: tatuadorId });
+                    res.status(201).json({ message: 'Tatuador registrado exitosamente', tatuaId: tatuadorId });
                 });
             });
         });
@@ -572,6 +576,7 @@ app.get('/api/facturas', (req, res) => {
 
 // -----------------------------------------------------------------------------------------
 
+
 app.post('/api/sendVerificationCode', (req, res) => {
     const { email } = req.body;
     if (!email) {
@@ -598,7 +603,6 @@ app.post('/api/sendVerificationCode', (req, res) => {
     });
     res.status(200).json({ code: generatedCode });
 });
-
 
 
 // Iniciar el servidor

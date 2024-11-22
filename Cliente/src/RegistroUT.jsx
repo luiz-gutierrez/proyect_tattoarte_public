@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
 
 function RegistroUT() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [especialidades, setEspecialidades] = useState([]);
   const [formData, setFormData] = useState({
     nombre: '',
     apellido: '',
     telefono: '',
-    email: '',
+    email: location.state?.verifiedEmail || '', // Obtener el email verificado del estado
     password: '',
     dir_calle: '',
     dir_numero_ext: '',
@@ -21,42 +23,52 @@ function RegistroUT() {
     red_tiktok: '',
     red_facebook: '',
     red_whatsapp: '',
-    red_instagram: ''
+    red_instagram: '',
   });
   const [errors, setErrors] = useState({});
-  const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get('http://localhost:3001/api/especialidades')
-      .then(response => {
+    // Redirigir si no hay email verificado
+    if (!location.state?.verifiedEmail) {
+      navigate('/login'); // O la ruta donde esté tu modal de verificación
+      return;
+    }
+
+    // Cargar especialidades
+    axios
+      .get('http://localhost:3001/api/especialidades')
+      .then((response) => {
         setEspecialidades(response.data);
       })
-      .catch(error => {
+      .catch((error) => {
         console.error('Error fetching specialties:', error);
       });
-  }, []);
+  }, [location.state, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
+    if (name === 'email') return; // No permitir modificar el email
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
   };
 
   const validateForm = () => {
     const newErrors = {};
-    const requiredFields = [
-      'nombre', 'apellido', 'telefono', 'email', 'password',
-      'dir_calle', 'dir_numero_ext', 'dir_colonia', 'dir_cp',
-      'dir_municipio', 'dir_estado', 'dir_localidad'
-    ];
 
-    requiredFields.forEach(field => {
-      if (!formData[field]) {
-        newErrors[field] = 'Este campo es requerido';
-      }
-    });
+    // Validar campos obligatorios
+    if (!formData.nombre.trim()) newErrors.nombre = 'El nombre es obligatorio';
+    if (!formData.apellido.trim()) newErrors.apellido = 'El apellido es obligatorio';
+    if (!formData.telefono.trim()) newErrors.telefono = 'El teléfono es obligatorio';
+    if (!formData.password.trim()) newErrors.password = 'La contraseña es obligatoria';
+    if (!formData.dir_calle.trim()) newErrors.dir_calle = 'La calle es obligatoria';
+    if (!formData.dir_numero_ext.trim()) newErrors.dir_numero_ext = 'El número exterior es obligatorio';
+    if (!formData.dir_colonia.trim()) newErrors.dir_colonia = 'La colonia es obligatoria';
+    if (!formData.dir_cp.trim()) newErrors.dir_cp = 'El código postal es obligatorio';
+    if (!formData.dir_municipio.trim()) newErrors.dir_municipio = 'El municipio es obligatorio';
+    if (!formData.dir_estado.trim()) newErrors.dir_estado = 'El estado es obligatorio';
+    if (!formData.dir_localidad.trim()) newErrors.dir_localidad = 'La localidad es obligatoria';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -64,6 +76,7 @@ function RegistroUT() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
     if (validateForm()) {
       fetch('http://localhost:3001/api/register', {
         method: 'POST',
@@ -72,42 +85,36 @@ function RegistroUT() {
         },
         body: JSON.stringify({
           ...formData,
-          especialidades: especialidades.map(esp => ({ esp_id: esp.esp_id, status: 0 })) // Guardar todas las especialidades con estado 0
+          especialidades: especialidades.map((esp) => ({ esp_id: esp.esp_id, status: 0 })), // Guardar todas las especialidades con estado 0
         }),
       })
-        .then(response => {
-          // Comprobar si la respuesta es exitosa (status 200-299)
-          if (!response.ok) {
-            throw new Error('Error en la respuesta del servidor');
-          }
+        .then((response) => {
+          if (!response.ok) throw new Error('Error en la respuesta del servidor');
           return response.json();
         })
-        .then(data => {
-          console.log('Response:', data); // Asegúrate de ver toda la respuesta aquí
-          // Cambiar la condición para que verifique el mensaje correcto
+        .then((data) => {
+          console.log('Response:', data);
+
           if (data.message.includes('Tatuador y factura registrados exitosamente')) {
             localStorage.setItem('tatuaName', formData.nombre);
             localStorage.setItem('tatuaId', data.tatuaId);
-            navigate('/inicio_tatuador'); // Redireccionar si el registro es exitoso
+            navigate('/inicio_tatuador');
           } else {
-            // Manejar el mensaje de error correctamente
             console.error('Error en el registro:', data.message);
-            // Aquí podrías mostrar un mensaje de error en la UI si lo deseas
           }
         })
         .catch((error) => {
           console.error('Error en la solicitud:', error);
-          // Aquí podrías mostrar un mensaje de error en la UI si lo deseas
         });
     }
   };
-  
+
   return (
     <div className="Fondo1">
       <nav className="navbar navbar-expand-lg bg-dark border-bottom border-body" data-bs-theme="dark">
         <div className="container-fluid">
           <a className="navbar-brand" href="#">TATTOOARTE</a>
-          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span className="navbar-toggler-icon"></span>
           </button>
           <div className="collapse navbar-collapse" id="navbarNav">
@@ -128,71 +135,60 @@ function RegistroUT() {
       <div className="cuadro">
         <h2>DATOS PERSONALES</h2>
         <form onSubmit={handleSubmit}>
+          {/* Campos personales */}
           <div className="row">
             <div className="col">
-              <input type="text" className="form-control" placeholder="NOMBRE" aria-label="First name" name="nombre" onChange={handleInputChange} />
-              {errors.nombre && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.nombre}</div>}
-              <br />
-              <input type="text" className="form-control" placeholder="APELLIDO" aria-label="First name" name="apellido" onChange={handleInputChange} />
-              {errors.apellido && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.apellido}</div>}
-              <br />
-              <input type="text" className="form-control" placeholder="TELEFONO" aria-label="First name" name="telefono" onChange={handleInputChange} />
-              {errors.telefono && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.telefono}</div>}
-              <br />
+              <input type="text" className="form-control" placeholder="NOMBRE" name="nombre" onChange={handleInputChange} value={formData.nombre} />
+              {errors.nombre && <div className="alert alert-danger">{errors.nombre}</div>}
+              <input type="text" className="form-control" placeholder="APELLIDO" name="apellido" onChange={handleInputChange} value={formData.apellido} />
+              {errors.apellido && <div className="alert alert-danger">{errors.apellido}</div>}
+              <input type="text" className="form-control" placeholder="TELEFONO" name="telefono" onChange={handleInputChange} value={formData.telefono} />
+              {errors.telefono && <div className="alert alert-danger">{errors.telefono}</div>}
             </div>
             <div className="col">
-              <input type="text" className="form-control" placeholder="CORREO" aria-label="Email" name="email" onChange={handleInputChange} />
-              {errors.email && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.email}</div>}
-              <br />
-              <input type="password" className="form-control" placeholder="CONTRASEÑA" aria-label="Password" name="password" onChange={handleInputChange} />
-              {errors.password && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.password}</div>}
-              <br />
+              <input type="text" className="form-control" placeholder="CORREO" name="email" value={formData.email} readOnly disabled style={{ backgroundColor: '#e9ecef' }} />
+              <input type="password" className="form-control" placeholder="CONTRASEÑA" name="password" onChange={handleInputChange} value={formData.password} />
+              {errors.password && <div className="alert alert-danger">{errors.password}</div>}
             </div>
           </div>
+
+          {/* Dirección */}
+          <h2>DIRECCIÓN</h2>
           <div className="row">
-            <h2>DIRECCION</h2>
             <div className="col">
-              <input type="text" className="form-control" placeholder="CALLE" aria-label="Street" name="dir_calle" onChange={handleInputChange} />
-              {errors.dir_calle && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.dir_calle}</div>}
-              <br />
-              <input type="text" className="form-control" placeholder="NUMERO EXTERIOR" aria-label="Exterior number" name="dir_numero_ext" onChange={handleInputChange} />
-              {errors.dir_numero_ext && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.dir_numero_ext}</div>}
-              <br />
-              <input type="text" className="form-control" placeholder="COLONIA" aria-label="Neighborhood" name="dir_colonia" onChange={handleInputChange} />
-              {errors.dir_colonia && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.dir_colonia}</div>}
-              <br />
-              <input type="text" className="form-control" placeholder="CODIGO POSTAL" aria-label="Postal code" name="dir_cp" onChange={handleInputChange} />
-              {errors.dir_cp && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.dir_cp}</div>}
-              <br />
+              <input type="text" className="form-control" placeholder="CALLE" name="dir_calle" onChange={handleInputChange} value={formData.dir_calle} />
+              {errors.dir_calle && <div className="alert alert-danger">{errors.dir_calle}</div>}
+              <input type="text" className="form-control" placeholder="NUMERO EXTERIOR" name="dir_numero_ext" onChange={handleInputChange} value={formData.dir_numero_ext} />
+              {errors.dir_numero_ext && <div className="alert alert-danger">{errors.dir_numero_ext}</div>}
+              <input type="text" className="form-control" placeholder="COLONIA" name="dir_colonia" onChange={handleInputChange} value={formData.dir_colonia} />
+              {errors.dir_colonia && <div className="alert alert-danger">{errors.dir_colonia}</div>}
             </div>
             <div className="col">
-              <input type="text" className="form-control" placeholder="MUNICIPIO" aria-label="Municipality" name="dir_municipio" onChange={handleInputChange} />
-              {errors.dir_municipio && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.dir_municipio}</div>}
-              <br />
-              <input type="text" className="form-control" placeholder="ESTADO" aria-label="State" name="dir_estado" onChange={handleInputChange} />
-              {errors.dir_estado && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.dir_estado}</div>}
-              <br />
-              <input type="text" className="form-control" placeholder="LOCALIDAD" aria-label="Locality" name="dir_localidad" onChange={handleInputChange} />
-              {errors.dir_localidad && <div className="alert alert-danger d-inline-flex p-2 bd-highlight">{errors.dir_localidad}</div>}
-              <br />
+              <input type="text" className="form-control" placeholder="CÓDIGO POSTAL" name="dir_cp" onChange={handleInputChange} value={formData.dir_cp} />
+              {errors.dir_cp && <div className="alert alert-danger">{errors.dir_cp}</div>}
+              <input type="text" className="form-control" placeholder="MUNICIPIO" name="dir_municipio" onChange={handleInputChange} value={formData.dir_municipio} />
+              {errors.dir_municipio && <div className="alert alert-danger">{errors.dir_municipio}</div>}
+              <input type="text" className="form-control" placeholder="ESTADO" name="dir_estado" onChange={handleInputChange} value={formData.dir_estado} />
+              {errors.dir_estado && <div className="alert alert-danger">{errors.dir_estado}</div>}
+              <input type="text" className="form-control" placeholder="LOCALIDAD" name="dir_localidad" onChange={handleInputChange} value={formData.dir_localidad} />
+              {errors.dir_localidad && <div className="alert alert-danger">{errors.dir_localidad}</div>}
             </div>
           </div>
+
+          {/* Redes Sociales */}
+          <h2>REDES SOCIALES</h2>
           <div className="row">
-            <h2>REDES SOCIALES</h2>
             <div className="col">
-              <input type="text" className="form-control" placeholder="TIKTOK" aria-label="Tiktok" name="red_tiktok" onChange={handleInputChange} />
-              <br />
-              <input type="text" className="form-control" placeholder="FACEBOOK" aria-label="Facebook" name="red_facebook" onChange={handleInputChange} />
-              <br />
+              <input type="text" className="form-control" placeholder="TIKTOK" name="red_tiktok" onChange={handleInputChange} value={formData.red_tiktok} />
+              <input type="text" className="form-control" placeholder="FACEBOOK" name="red_facebook" onChange={handleInputChange} value={formData.red_facebook} />
             </div>
             <div className="col">
-              <input type="text" className="form-control" placeholder="WHATSAPP" aria-label="Whatsapp" name="red_whatsapp" onChange={handleInputChange} />
-              <br />
-              <input type="text" className="form-control" placeholder="INSTAGRAM" aria-label="Instagram" name="red_instagram" onChange={handleInputChange} />
-              <br />
+              <input type="text" className="form-control" placeholder="WHATSAPP" name="red_whatsapp" onChange={handleInputChange} value={formData.red_whatsapp} />
+              <input type="text" className="form-control" placeholder="INSTAGRAM" name="red_instagram" onChange={handleInputChange} value={formData.red_instagram} />
             </div>
           </div>
-          <button type="submit" className="btn btn-primary">REGISTRAR</button>
+
+          <button type="submit" className="btn btn-dark mt-3">REGISTRAR</button>
         </form>
       </div>
     </div>
