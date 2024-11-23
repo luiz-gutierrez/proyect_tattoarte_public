@@ -2,7 +2,7 @@ const express = require('express'); // Importa Express para crear el servidor
 const multer = require('multer'); // Importa Multer para manejar la carga de archivos
 const path = require('path'); // Importa Path para trabajar con rutas de archivos
 const bodyParser = require('body-parser'); // Importa Body-Parser para procesar datos de formularios
-const mysql = require('mysql'); // Importa MySQL para interactuar con la base de datos
+const mysql = require('mysql2'); // Importa MySQL para interactuar con la base de datos
 const cors = require('cors'); // Importa CORS para permitir solicitudes desde diferentes dominios
 const moment = require('moment-timezone'); // Asegúrate de tener esta librería para manejar fechas
 const nodemailer = require('nodemailer');
@@ -576,6 +576,35 @@ app.get('/api/facturas', (req, res) => {
 
 // -----------------------------------------------------------------------------------------
 
+app.post('/api/checkEmail', async (req, res) => {
+    const { email } = req.body;
+    try {
+        // Usar `promise()` para las consultas
+        const [resultTatuadores] = await db.promise().query(
+            'SELECT COUNT(*) AS count FROM tatuadores WHERE email = ?',
+            [email]
+        );
+
+        const [resultViewers] = await db.promise().query(
+            'SELECT COUNT(*) AS count FROM viewers WHERE viw_email = ?',
+            [email]
+        );
+
+        const countTatuadores = resultTatuadores[0]?.count || 0;
+        const countViewers = resultViewers[0]?.count || 0;
+
+        if (countTatuadores > 0 || countViewers > 0) {
+            return res.status(400).json({ message: 'El correo ya está registrado' });
+        }
+
+        res.status(200).json({ message: 'El correo no está registrado' });
+    } catch (error) {
+        console.error('Error al verificar el correo:', error);
+        res.status(500).json({ message: 'Error al verificar el correo' });
+    }
+});
+
+// -------------------------------------------------------------------------------------------------------
 
 app.post('/api/sendVerificationCode', (req, res) => {
     const { email } = req.body;
@@ -603,7 +632,7 @@ app.post('/api/sendVerificationCode', (req, res) => {
     });
     res.status(200).json({ code: generatedCode });
 });
-
+// -----------------------------------------------------------------------------------------------
 
 // Iniciar el servidor
 app.listen(port, () => {

@@ -60,16 +60,27 @@ function Login() {
     };
 
     // Función para enviar el código de verificación por correo
-    const handleEmailVerification = async () => {
-        try {
+const handleEmailVerification = async () => {
+    try {
+        // Verifica si el correo está registrado
+        const checkResponse = await axios.post('http://localhost:3001/api/checkEmail', { email: emailToVerify });
+        if (checkResponse.status === 200) {
+            // Si el correo no está registrado, envía el código
             const response = await axios.post('http://localhost:3001/api/sendVerificationCode', { email: emailToVerify });
             console.log('Código enviado:', response.data.code);
             setGeneratedCode(response.data.code); // Guarda el código generado
             setShowEmailModal(false); // Cierra el modal del correo
-        } catch (error) {
-            console.error('Error sending verification code:', error);
         }
-    };
+    } catch (error) {
+        console.error('Error al verificar el correo:', error);
+        if (error.response?.data?.message) {
+            setError(error.response.data.message); // Muestra mensaje si el correo está registrado
+        } else {
+            setError('Error al verificar el correo');
+        }
+    }
+};
+
 
     // Verificar si el código ingresado coincide con el código generado
     const handleVerifyCode = () => {
@@ -208,12 +219,14 @@ function Login() {
                         value={emailToVerify}
                         onChange={(e) => setEmailToVerify(e.target.value)}
                     />
+                    {error && <div className="alert alert-danger mt-2">{error}</div>}
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={handleClose}>Cerrar</Button>
                     <Button variant="primary" onClick={handleEmailVerification}>Enviar Código</Button>
                 </Modal.Footer>
             </Modal>
+
 
             {/* Modal para la verificación del correo */}
             <Modal show={!!generatedCode} onHide={handleClose}>
